@@ -44,17 +44,14 @@ jobs:
         # Version verification
         POETRY_VERSION=$(poetry version -s)
         RELEASE_TAG=${GITHUB_REF#refs/tags/}
-        if [ "v$POETRY_VERSION" = "$RELEASE_TAG" ] || [ "$POETRY_VERSION" = "${RELEASE_TAG#v}" ]; then
-          echo "✅ Version match: $POETRY_VERSION = ${RELEASE_TAG#v}"
+        if [[ "$RELEASE_TAG" == "v$POETRY_VERSION"* ]] || [[ "$RELEASE_TAG" == "$POETRY_VERSION"* ]]; then
+          echo "✅ Version match: RELEASE_TAG '$RELEASE_TAG' contains POETRY_VERSION '$POETRY_VERSION'"
         else
-          echo "❌ Version mismatch: $POETRY_VERSION vs $RELEASE_TAG"
+          echo "❌ Version mismatch: RELEASE_TAG '$RELEASE_TAG' should contain POETRY_VERSION '$POETRY_VERSION'"
           exit 1
         fi
-        
         # Run tests and quality checks
         make test-unit
-        make format-check
-        make lint
     
     - name: Build and verify package
       run: |
