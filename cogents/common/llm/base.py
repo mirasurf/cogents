@@ -1,10 +1,11 @@
+from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Type, TypeVar, Union
 
 T = TypeVar("T")
 
 
-class BaseLLMDelegator:
+class BaseLLMClient(ABC):
     """Client for interacting with LLMs via OpenRouter using OpenAI SDK."""
 
     def __init__(self, instructor: bool = False):
@@ -15,6 +16,7 @@ class BaseLLMDelegator:
             instructor: Whether to enable instructor for structured output
         """
 
+    @abstractmethod
     def chat_completion(
         self,
         messages: List[Dict[str, str]],
@@ -36,8 +38,8 @@ class BaseLLMDelegator:
         Returns:
             Generated text response or streaming response
         """
-        raise NotImplementedError("Chat completion is not implemented in the base class")
 
+    @abstractmethod
     def structured_completion(
         self,
         messages: List[Dict[str, str]],
@@ -59,8 +61,8 @@ class BaseLLMDelegator:
         Returns:
             Structured response as the specified model type
         """
-        raise NotImplementedError("Structured completion is not implemented in the base class")
 
+    @abstractmethod
     def understand_image(
         self,
         image_path: Union[str, Path],
@@ -82,8 +84,8 @@ class BaseLLMDelegator:
         Returns:
             Analysis of the image
         """
-        raise NotImplementedError("Image understanding is not implemented in the base class")
 
+    @abstractmethod
     def understand_image_from_url(
         self,
         image_url: str,
@@ -105,4 +107,3 @@ class BaseLLMDelegator:
         Returns:
             Analysis of the image
         """
-        raise NotImplementedError("Image understanding from URL is not implemented in the base class")

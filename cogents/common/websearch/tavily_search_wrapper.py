@@ -3,7 +3,7 @@ Production-level Tavily Search wrapper with enhanced functionality.
 
 This module provides a polished, production-ready wrapper around the Tavily Search API
 with proper error handling, logging, configuration management, and integration
-with the existing cogent-nano search infrastructure.
+with the existing cogents search infrastructure.
 """
 
 import logging

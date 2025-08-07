@@ -21,7 +21,7 @@ def configure_langsmith() -> bool:
     """
     try:
         langsmith_api_key = os.getenv("LANGSMITH_API_KEY")
-        langsmith_project = os.getenv("LANGSMITH_PROJECT", "cogent-nano")
+        langsmith_project = os.getenv("LANGSMITH_PROJECT", "default")
         langsmith_endpoint = os.getenv("LANGSMITH_ENDPOINT", "https://api.smith.langchain.com")
         langsmith_tracing = os.getenv("LANGSMITH_TRACING", "false").lower() == "true"
 

@@ -15,21 +15,12 @@ import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Type, TypeVar, Union
 
+# Import instructor for structured output
+from instructor import Instructor, Mode, patch
 from openai import OpenAI
 
 from cogents.common.langsmith import configure_langsmith, is_langsmith_enabled
-from cogents.common.llm.base_delegator import BaseLLMDelegator
-
-# Import instructor for structured output
-try:
-    from instructor import Instructor, Mode, patch
-
-    INSTRUCTOR_AVAILABLE = True
-except ImportError:
-    INSTRUCTOR_AVAILABLE = False
-    Instructor = None
-    Mode = None
-    patch = None
+from cogents.common.llm.base import BaseLLMClient
 
 T = TypeVar("T")
 
@@ -39,7 +30,7 @@ logging.basicConfig(level=getattr(logging, log_level, logging.INFO))
 logger = logging.getLogger(__name__)
 
 
-class LLMClient(BaseLLMDelegator):
+class LLMClient(BaseLLMClient):
     """Client for interacting with OpenAI-compatible LLM services."""
 
     def __init__(
@@ -62,11 +53,14 @@ class LLMClient(BaseLLMDelegator):
         """
         # Configure LangSmith tracing for observability
         configure_langsmith()
+        self._langsmith_provider = "openai"
 
         # Set API key from parameter or environment
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
         if not self.api_key:
-            raise ValueError("OpenAI API key is required. Provide api_key parameter or set OPENAI_API_KEY environment variable.")
+            raise ValueError(
+                "OpenAI API key is required. Provide api_key parameter or set OPENAI_API_KEY environment variable."
+            )
 
         # Set base URL (defaults to OpenAI if not provided)
         self.base_url = base_url
@@ -75,7 +69,7 @@ class LLMClient(BaseLLMDelegator):
         client_kwargs = {"api_key": self.api_key}
         if self.base_url:
             client_kwargs["base_url"] = self.base_url
-        
+
         self.client = OpenAI(**client_kwargs)
 
         # Model configurations
@@ -85,9 +79,6 @@ class LLMClient(BaseLLMDelegator):
         # Initialize instructor if requested
         self.instructor = None
         if instructor:
-            if not INSTRUCTOR_AVAILABLE:
-                raise ValueError("Instructor is required for structured output. Install with: pip install instructor")
-
             # Create instructor instance for structured output
             patched_client = patch(self.client, mode=Mode.JSON)
             self.instructor = Instructor(
@@ -123,7 +114,7 @@ class LLMClient(BaseLLMDelegator):
                 # Add model information to kwargs for better tracing
                 kwargs.setdefault("extra_headers", {})
                 kwargs["extra_headers"]["X-LangSmith-Model"] = self.chat_model
-                kwargs["extra_headers"]["X-LangSmith-Provider"] = "openai"
+                kwargs["extra_headers"]["X-LangSmith-Provider"] = self._langsmith_provider
 
             response = self.client.chat.completions.create(
                 model=self.chat_model,
@@ -172,7 +163,7 @@ class LLMClient(BaseLLMDelegator):
             if is_langsmith_enabled():
                 kwargs.setdefault("extra_headers", {})
                 kwargs["extra_headers"]["X-LangSmith-Model"] = self.chat_model
-                kwargs["extra_headers"]["X-LangSmith-Provider"] = "openai"
+                kwargs["extra_headers"]["X-LangSmith-Provider"] = self._langsmith_provider
                 kwargs["extra_headers"]["X-LangSmith-Type"] = "structured"
                 kwargs["extra_headers"]["X-LangSmith-Response-Model"] = response_model.__name__
 
@@ -239,7 +230,7 @@ class LLMClient(BaseLLMDelegator):
             if is_langsmith_enabled():
                 kwargs.setdefault("extra_headers", {})
                 kwargs["extra_headers"]["X-LangSmith-Model"] = self.vision_model
-                kwargs["extra_headers"]["X-LangSmith-Provider"] = "openai"
+                kwargs["extra_headers"]["X-LangSmith-Provider"] = self._langsmith_provider
                 kwargs["extra_headers"]["X-LangSmith-Type"] = "vision"
 
             response = self.client.chat.completions.create(
@@ -292,7 +283,7 @@ class LLMClient(BaseLLMDelegator):
             if is_langsmith_enabled():
                 kwargs.setdefault("extra_headers", {})
                 kwargs["extra_headers"]["X-LangSmith-Model"] = self.vision_model
-                kwargs["extra_headers"]["X-LangSmith-Provider"] = "openai"
+                kwargs["extra_headers"]["X-LangSmith-Provider"] = self._langsmith_provider
                 kwargs["extra_headers"]["X-LangSmith-Type"] = "vision-url"
 
             response = self.client.chat.completions.create(
@@ -308,57 +299,3 @@ class LLMClient(BaseLLMDelegator):
         except Exception as e:
             logger.error(f"Error analyzing image from URL: {e}")
             raise
-
-
-# Convenience functions for easy usage
-def get_llm_client(
-    base_url: Optional[str] = None,
-    api_key: Optional[str] = None,
-    chat_model: Optional[str] = None,
-    vision_model: Optional[str] = None,
-) -> LLMClient:
-    """
-    Get an LLM client instance.
-
-    Args:
-        base_url: Base URL for the OpenAI-compatible API
-        api_key: API key for authentication
-        chat_model: Model to use for chat completions
-        vision_model: Model to use for vision tasks
-
-    Returns:
-        LLMClient instance
-    """
-    return LLMClient(
-        base_url=base_url,
-        api_key=api_key,
-        chat_model=chat_model,
-        vision_model=vision_model,
-    )
-
-
-def get_llm_client_instructor(
-    base_url: Optional[str] = None,
-    api_key: Optional[str] = None,
-    chat_model: Optional[str] = None,
-    vision_model: Optional[str] = None,
-) -> LLMClient:
-    """
-    Get an LLM client instance with instructor support.
-
-    Args:
-        base_url: Base URL for the OpenAI-compatible API
-        api_key: API key for authentication
-        chat_model: Model to use for chat completions
-        vision_model: Model to use for vision tasks
-
-    Returns:
-        LLMClient instance with instructor enabled
-    """
-    return LLMClient(
-        base_url=base_url,
-        api_key=api_key,
-        instructor=True,
-        chat_model=chat_model,
-        vision_model=vision_model,
-    )

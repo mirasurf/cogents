@@ -1,14 +1,14 @@
 from pathlib import Path
 from typing import Dict, List, Optional, Type, TypeVar, Union
 
-from .base_delegator import BaseLLMDelegator
+from .base import BaseLLMClient
 
 T = TypeVar("T")
 
 
-class LLMClient(BaseLLMDelegator):
-    def __init__(self):
-        super().__init__()
+class LLMClient(BaseLLMClient):
+    def __init__(self, instructor: bool = False):
+        super().__init__(instructor=instructor)
 
     def chat_completion(
         self,
