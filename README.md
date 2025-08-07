@@ -13,9 +13,15 @@ Cogents offers a bunch of common modules for creating intelligent agent-based ap
   - more agents oncoming
 - **LLM integration** supporting OpenAI, Google GenAI (via OpenRouter), and Ollama
 - **Web search capabilities** via Tavily and Google AI Search
-- **Semantic search** with Weaviate integration
+- **Semantic search** integrated semantic web search with Weaviate
 - **Voice processing** with smart voice features
 - **Observability** through LangSmith integration
+
+## Install
+
+```
+pip install -U cogents
+```
 
 ## Documentation
 

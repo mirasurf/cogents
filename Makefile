@@ -201,30 +201,40 @@ docs-clean: ## Clean documentation build artifacts
 
 release: clean build ## Build all release artifacts
 
-publish: check-publish-prereqs build ## Publish package to PyPI
-	@if [ -z "$(shell ls -A dist/ 2>/dev/null)" ]; then \
-		echo "$(RED)❌ No distribution files found. Run 'make build' first.$(RESET)"; \
-		exit 1; \
-	fi
-	twine check dist/*
-	twine upload dist/*
+publish: check-publish-prereqs ## Publish package to PyPI
+	@echo "$(BLUE)📦 Publishing to PyPI...$(RESET)"
+	@$(POETRY) publish --build
 	@echo "$(GREEN)✅ Package published to PyPI$(RESET)"
 
-publish-test: check-publish-prereqs build ## Publish package to TestPyPI
-	@if [ -z "$(shell ls -A dist/ 2>/dev/null)" ]; then \
-		echo "$(RED)❌ No distribution files found. Run 'make build' first.$(RESET)"; \
-		exit 1; \
-	fi
-	twine check dist/*
-	twine upload --repository testpypi dist/*
+publish-test: check-publish-prereqs ## Publish package to TestPyPI
+	@echo "$(BLUE)📦 Publishing to TestPyPI...$(RESET)"
+	@$(POETRY) publish --repository testpypi --build
 	@echo "$(GREEN)✅ Package published to TestPyPI$(RESET)"
 
 check-publish-prereqs: ## Check prerequisites for publishing
-	@command -v twine >/dev/null 2>&1 || (echo "$(RED)❌ twine not found. Install with: pip install twine$(RESET)" && exit 1)
-	@python -c "import twine" 2>/dev/null || (echo "$(RED)❌ twine not available in Python. Install with: pip install twine$(RESET)" && exit 1)
-	@if [ -z "$${TWINE_USERNAME}" ] && [ -z "$${TWINE_PASSWORD}" ] && [ ! -f ~/.pypirc ]; then \
-		echo "$(RED)❌ PyPI credentials not found. Set TWINE_USERNAME/TWINE_PASSWORD or configure ~/.pypirc$(RESET)"; \
-		exit 1; \
+	@echo "$(BLUE)🔍 Checking publishing prerequisites...$(RESET)"
+	@$(POETRY) --version >/dev/null 2>&1 || (echo "$(RED)❌ Poetry not found. Install with: pip install poetry$(RESET)" && exit 1)
+	@if [ -z "$${POETRY_PYPI_TOKEN_PYPI}" ] && [ -z "$${POETRY_PYPI_TOKEN_TESTPYPI}" ] && [ ! -f ~/.pypirc ]; then \
+		echo "$(YELLOW)⚠️  PyPI credentials not found. Set POETRY_PYPI_TOKEN_PYPI or configure ~/.pypirc$(RESET)"; \
+		echo "$(BLUE)💡 You can set credentials with:$(RESET)"; \
+		echo "   export POETRY_PYPI_TOKEN_PYPI=pypi-your_token_here"; \
+		echo "   export POETRY_PYPI_TOKEN_TESTPYPI=pypi-your_test_token_here"; \
+		echo "   OR configure ~/.pypirc file"; \
+		echo "$(BLUE)💡 Get tokens from: https://pypi.org/manage/account/token/$(RESET)"; \
+	fi
+
+test-auth: ## Test PyPI authentication
+	@echo "$(BLUE)🔐 Testing PyPI authentication...$(RESET)"
+	@$(POETRY) config --list | grep pypi || echo "$(YELLOW)No Poetry PyPI config found$(RESET)"
+	@if [ -n "$${POETRY_PYPI_TOKEN_PYPI}" ]; then \
+		echo "$(GREEN)✅ POETRY_PYPI_TOKEN_PYPI is set$(RESET)"; \
+	else \
+		echo "$(YELLOW)⚠️  POETRY_PYPI_TOKEN_PYPI not set$(RESET)"; \
+	fi
+	@if [ -f ~/.pypirc ]; then \
+		echo "$(GREEN)✅ ~/.pypirc file exists$(RESET)"; \
+	else \
+		echo "$(YELLOW)⚠️  ~/.pypirc file not found$(RESET)"; \
 	fi
 
 # =============================================================================
