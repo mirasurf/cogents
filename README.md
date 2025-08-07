@@ -2,7 +2,7 @@
 
 A collection of essential, high-quality building blocks for constructing sophisticated multi-agent systems (MAS), with a primary focus on LangGraph. Not a full agentic framework, but a lightweight repository of key components to help bridge the last mile in MAS development.
 
-For the underlying philosophy, refer to my this talk on MAS ([link](https://github.com/caesar0301/mas-talk-2508/blob/f6baf3d7f3aed9f39b965b5bfc16aff838f5b192/mas-talk-xmingc.pdf)).
+For the underlying philosophy, refer to my this talk on MAS ([link](https://github.com/caesar0301/mas-talk-2508/blob/master/mas-talk-xmingc.pdf)).
 
 ## Overview
 

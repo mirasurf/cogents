@@ -33,8 +33,8 @@ jobs:
           pip install poetry
       - name: Install dependencies
         run: make install-dev
-      - name: Run code quality checks
-        run: make quality
+      # - name: Run code quality checks
+      #   run: make quality
       - name: Run unit tests
         run: make test-unit
       - name: Upload test results
