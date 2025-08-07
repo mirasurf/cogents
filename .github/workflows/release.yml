@@ -37,7 +37,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        poetry install --with dev,extensions
+        poetry install --with dev
     
     - name: Verify version and run checks
       run: |
