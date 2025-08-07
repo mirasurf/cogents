@@ -18,7 +18,7 @@ from typing import Any, Dict, List, Optional, Type, TypeVar, Union
 from openai import OpenAI
 
 from cogents.common.consts import GEMINI_FLASH
-from cogents.common.langsmith_config import configure_langsmith, is_langsmith_enabled
+from cogents.common.langsmith import configure_langsmith, is_langsmith_enabled
 from cogents.common.llm.base_delegator import BaseLLMDelegator
 
 # Import instructor for structured output

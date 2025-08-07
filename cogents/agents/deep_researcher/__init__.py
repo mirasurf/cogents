@@ -10,7 +10,7 @@ is required for real web search capabilities.
 """
 
 # Enable colorful logging by default for deep_researcher
-from cogents.common.logging_config import setup_logging
+from cogents.common.logging import setup_logging
 
 setup_logging(level="INFO", enable_colors=True)
 

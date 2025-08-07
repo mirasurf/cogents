@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-from cogents.common.langsmith_config import get_langsmith_project, is_langsmith_enabled
+from cogents.common.langsmith import get_langsmith_project, is_langsmith_enabled
 from cogents.common.llm.openrouter import get_llm_client, get_llm_client_instructor
 
 

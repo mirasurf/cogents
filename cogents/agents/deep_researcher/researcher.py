@@ -12,9 +12,9 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.types import Send
 
 from cogents.agents.base import BaseResearcher, ResearchOutput
-from cogents.common.langsmith_config import configure_langsmith
+from cogents.common.langsmith import configure_langsmith
 from cogents.common.llm.openrouter import get_llm_client_instructor
-from cogents.common.logging_config import get_logger
+from cogents.common.logging import get_logger
 
 from .configuration import Configuration
 from .prompts import get_research_prompts
@@ -201,17 +201,6 @@ class DeepResearcher(BaseResearcher):
         Returns:
             Formatted final answer
         """
-        # Add source information if available
-        if sources:
-            source_section = "\n\n## Sources\n"
-            for i, source in enumerate(sources, 1):
-                if isinstance(source, dict):
-                    url = source.get("value", source.get("url", f"Source {i}"))
-                    title = source.get("label", source.get("title", f"Source {i}"))
-                    source_section += f"{i}. [{title}]({url})\n"
-                else:
-                    source_section += f"{i}. {source}\n"
-            final_answer += source_section
         return final_answer
 
     def _create_research_graph(self) -> StateGraph:

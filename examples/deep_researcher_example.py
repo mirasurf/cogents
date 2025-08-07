@@ -14,8 +14,8 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from cogents.agents import DeepResearcher
-from cogents.agents.deep_researcher.configuration import Configuration
+from cogents.agents.deep_researcher import Configuration as DeepResearcherConfig
+from cogents.agents.deep_researcher import DeepResearcher
 
 
 def main():
@@ -29,7 +29,11 @@ def main():
     # 2. Initialize the researcher
     print("🚀 Initializing DeepResearcher...")
     researcher = DeepResearcher(
-        configuration=Configuration(search_engine="google", number_of_initial_queries=2, max_research_loops=2)
+        configuration=DeepResearcherConfig(
+            search_engine="google",
+            number_of_initial_queries=2,
+            max_research_loops=2,
+        )
     )
 
     # 3. Define research topic
@@ -45,6 +49,19 @@ def main():
     print(f"📄 Summary: {result.summary}")
     print(f"📊 Sources found: {len(result.sources)}")
     print(f"📖 Content: {result.content}")
+
+    # Add source information if available
+    source_section = f"\n\n## Sources ({len(result.sources)} found)\n"
+    for i, source in enumerate(result.sources, 1):
+        if i > 15:
+            break
+        if isinstance(source, dict):
+            url = source.get("value", source.get("url", f"Source {i}"))
+            title = source.get("label", source.get("title", f"Source {i}"))
+            source_section += f"{i}. [{title}]({url})\n"
+        else:
+            source_section += f"{i}. {source}\n"
+    print(source_section)
 
     print(f"\n🎉 Research complete!")
 
