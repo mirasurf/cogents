@@ -54,6 +54,7 @@ python-dotenv = "^1.1.1"
 colorlog = "^6.8.0"
 # Type hints
 typing-extensions = "^4.8.0"
+deprecated = "^1.2.18"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.0.0"

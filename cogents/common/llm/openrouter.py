@@ -13,6 +13,8 @@ import logging
 import os
 from typing import Optional, TypeVar
 
+from deprecated import deprecated
+
 from cogents.common.consts import GEMINI_FLASH
 from cogents.common.llm.openai import LLMClient as OpenAILLMClient
 
@@ -71,17 +73,18 @@ class LLMClient(OpenAILLMClient):
         self._langsmith_provider = "openrouter"
 
 
-# Convenience functions for easy usage
-def get_llm_client() -> LLMClient:
+@deprecated(reason="Use `cogents.common.llm.get_llm_client` instead.")
+def get_llm_client(instructor: bool = False) -> LLMClient:
     """
     Get an LLM client instance.
 
     Returns:
         LLMClient instance
     """
-    return LLMClient()
+    return LLMClient(instructor=instructor)
 
 
+@deprecated(reason="Use `cogents.common.llm.get_llm_client` instead.")
 def get_llm_client_instructor() -> LLMClient:
     """
     Get an LLM client instance with instructor support.
