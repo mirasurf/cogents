@@ -63,7 +63,7 @@ class LLMClient(BaseLLMClient):
             )
 
         # Set base URL (defaults to OpenAI if not provided)
-        self.base_url = base_url
+        self.base_url = base_url or os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
 
         # Initialize OpenAI client
         client_kwargs = {"api_key": self.api_key}
