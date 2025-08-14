@@ -5,7 +5,7 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry]
 name = "cogents"
 version = "0.0.4"
-description = "A minimal template project for building Python libraries"
+description = "A collection of essential, high-quality building blocks for constructing sophisticated multi-agent systems."
 readme = "README.md"
 license = "MIT"
 authors = ["xming <chenxm35@gmail.com>"]
