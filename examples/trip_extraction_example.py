@@ -105,7 +105,9 @@ def example_context_merging():
         print(f"\nFollow-up Message: {followup_message}")
 
         # Merge with previous context
-        merged_context = extract_trip_plan_context.invoke({"user_message": followup_message, "previous_context": json.dumps(initial_context)})
+        merged_context = extract_trip_plan_context.invoke(
+            {"user_message": followup_message, "previous_context": json.dumps(initial_context)}
+        )
 
         print(f"\nMerged Context:")
         print(f"📍 Destination: {merged_context.get('destination')}")

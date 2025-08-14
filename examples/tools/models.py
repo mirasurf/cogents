@@ -2,7 +2,6 @@
 Trip model for CogentNano AlphaVersion.
 """
 
-from datetime import date, datetime
 from enum import Enum
 from typing import List, Optional
 
@@ -16,107 +15,57 @@ class TripStatus(Enum):
     CANCELLED = "cancelled"
 
 
-class TripDuration(str, Enum):
-    """Valid trip duration values."""
-
-    DAYS = "days"
-    WEEKS = "weeks"
-    MONTHS = "months"
-
-
-class TripSeason(str, Enum):
-    """Valid trip season values."""
-
-    SPRING = "spring"
-    SUMMER = "summer"
-    FALL = "fall"
-    AUTUMN = "autumn"
-    WINTER = "winter"
-
-
-class TripBudget(str, Enum):
-    """Valid trip budget levels."""
-
-    LOW = "low"
-    MEDIUM = "medium"
-    HIGH = "high"
-    LUXURY = "luxury"
-
-
 class Participant(BaseModel):
     name: str
     email: Optional[str] = None
     phone: Optional[str] = None
 
 
-class Trip(BaseModel):
-    id: str
-    name: str
-    destination: str
-    start_date: date
-    end_date: date
-    budget_min: float
-    budget_max: float
-    summary: str
-    participants: List[Participant] = Field(default_factory=list)
-    status: TripStatus = TripStatus.PLANNING
-    content: str = ""
-    created_at: datetime = Field(default_factory=datetime.now)
-    updated_at: datetime = Field(default_factory=datetime.now)
+class TripPlanContext(BaseModel):
+    """Unified trip plan context containing all extracted information."""
 
-
-# Structured output models
-class DestinationInfo(BaseModel):
-    """Structured destination information."""
-
-    destination: Optional[str] = Field(description="Extracted destination name or travel intent")
-    confidence: float = Field(description="Confidence score between 0 and 1")
-    location_type: Optional[str] = Field(description="Type of location (city, country, region, etc.)")
+    # Destination information
+    destination: Optional[str] = Field(default=None, description="Extracted destination name or travel intent")
+    location_type: Optional[str] = Field(default=None, description="Type of location (city, country, region, etc.)")
     travel_intent: Optional[str] = Field(
-        description="Travel intent if no specific destination (beach, cultural, adventure, etc.)"
+        default=None, description="Travel intent if no specific destination (beach, cultural, adventure, etc.)"
     )
 
+    # Date and timing information
+    start_date: Optional[str] = Field(default=None, description="Start date if specified")
+    end_date: Optional[str] = Field(default=None, description="End date if specified")
+    duration: Optional[str] = Field(default=None, description="Trip duration (e.g., '1 week', '3 days')")
+    flexibility: Optional[str] = Field(default=None, description="Date flexibility (flexible, specific, seasonal)")
+    season: Optional[str] = Field(default=None, description="Preferred season if mentioned")
 
-class DateInfo(BaseModel):
-    """Structured date and duration information."""
+    # Budget information
+    budget_level: Optional[str] = Field(default=None, description="Budget level (budget, moderate, luxury)")
+    min_amount: Optional[float] = Field(default=None, description="Minimum budget amount")
+    max_amount: Optional[float] = Field(default=None, description="Maximum budget amount")
+    currency: Optional[str] = Field(default=None, description="Currency (default USD)")
+    per_person: Optional[bool] = Field(default=None, description="Whether budget is per person")
 
-    start_date: Optional[str] = Field(description="Start date if specified")
-    end_date: Optional[str] = Field(description="End date if specified")
-    duration: Optional[str] = Field(description="Trip duration (e.g., '1 week', '3 days')")
-    flexibility: Optional[str] = Field(description="Date flexibility (flexible, specific, seasonal)")
-    season: Optional[str] = Field(description="Preferred season if mentioned")
-    confidence: float = Field(description="Confidence score between 0 and 1")
+    # Interests and activities
+    activities: List[str] = Field(default_factory=list, description="List of preferred activities")
+    travel_style: Optional[str] = Field(
+        default=None, description="Travel style (adventure, relaxation, cultural, etc.)"
+    )
+    must_see: List[str] = Field(default_factory=list, description="Must-see attractions or experiences")
+    avoid: List[str] = Field(default_factory=list, description="Things to avoid")
 
+    # Group information
+    group_size: Optional[int] = Field(default=None, description="Number of travelers")
+    group_composition: Optional[str] = Field(
+        default=None, description="Group composition (solo, couple, family, friends)"
+    )
+    ages: Optional[str] = Field(default=None, description="Age range or specific ages")
+    special_needs: List[str] = Field(default_factory=list, description="Special needs or requirements")
 
-class BudgetInfo(BaseModel):
-    """Structured budget information."""
-
-    level: Optional[str] = Field(description="Budget level (budget, moderate, luxury)")
-    min_amount: Optional[float] = Field(description="Minimum budget amount")
-    max_amount: Optional[float] = Field(description="Maximum budget amount")
-    currency: Optional[str] = Field(description="Currency (default USD)")
-    per_person: Optional[bool] = Field(description="Whether budget is per person")
-    confidence: float = Field(description="Confidence score between 0 and 1")
-
-
-class InterestsInfo(BaseModel):
-    """Structured interests and activities information."""
-
-    activities: List[str] = Field(description="List of preferred activities")
-    travel_style: Optional[str] = Field(description="Travel style (adventure, relaxation, cultural, etc.)")
-    must_see: List[str] = Field(description="Must-see attractions or experiences")
-    avoid: List[str] = Field(description="Things to avoid")
-    confidence: float = Field(description="Confidence score between 0 and 1")
-
-
-class GroupInfo(BaseModel):
-    """Structured group information."""
-
-    size: Optional[int] = Field(description="Number of travelers")
-    composition: Optional[str] = Field(description="Group composition (solo, couple, family, friends)")
-    ages: Optional[str] = Field(description="Age range or specific ages")
-    special_needs: List[str] = Field(description="Special needs or requirements")
-    confidence: float = Field(description="Confidence score between 0 and 1")
+    # Overall confidence and metadata
+    confidence: float = Field(description="Overall confidence score between 0 and 1")
+    extracted_fields: List[str] = Field(
+        default_factory=list, description="List of fields that were successfully extracted"
+    )
 
 
 class ResearchResult(BaseModel):
