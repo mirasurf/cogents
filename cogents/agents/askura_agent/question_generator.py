@@ -129,7 +129,7 @@ class QuestionGenerator:
         }
 
         # Extract contextual information
-        information_slots = state.information_slots
+        information_slots = state.extracted_information_slots
         contextual_info = self._extract_contextual_info(action, information_slots, context)
 
         # TODO (xmingc): I like the idea of letting the system hold a limited number of improvisations.
@@ -370,7 +370,7 @@ class QuestionGenerator:
     ) -> Optional[List[str]]:
         """Generate contextual elements using LLM based on available information."""
 
-        information_slots = state.information_slots
+        information_slots = state.extracted_information_slots
 
         # Prepare context information for LLM
         context_info = self._prepare_context_info_for_llm(action, information_slots, context)
@@ -454,7 +454,7 @@ class QuestionGenerator:
     ) -> List[str]:
         """Generate simple contextual elements using basic heuristics (fallback method)."""
         contextual_elements = []
-        information_slots = state.information_slots
+        information_slots = state.extracted_information_slots
 
         # Simple destination context
         if action in ["ask_dates", "ask_budget", "ask_interests"] and information_slots.get("destination"):

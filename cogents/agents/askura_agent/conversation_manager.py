@@ -308,7 +308,7 @@ class ConversationManager:
     def _get_missing_information_prioritized(self, state: AskuraState) -> List[str]:
         """Get prioritized list of missing information based on importance and context."""
         missing = []
-        information_slots = state.information_slots
+        information_slots = state.extracted_information_slots
 
         # Sort slots by priority (higher priority first)
         sorted_slots = sorted(self.config.information_slots, key=lambda slot: slot.priority, reverse=True)

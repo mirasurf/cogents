@@ -5,7 +5,6 @@ AskuraAgent provides a flexible, configurable framework for human-in-the-loop
 conversations that adapt to different user communication styles and dynamically
 collect required information through natural conversation flow.
 """
-
 import uuid
 from datetime import datetime
 from typing import Any, Dict, List, Optional
@@ -24,7 +23,7 @@ from cogents.common.utils import get_enum_value
 from .conversation_manager import ConversationManager
 from .information_extractor import InformationExtractor
 from .question_generator import QuestionGenerator
-from .schemas import AskuraConfig, AskuraResponse, AskuraState, ConversationContext
+from .schemas import AskuraConfig, AskuraResponse, AskuraState
 
 logger = get_logger(__name__)
 
@@ -70,7 +69,7 @@ class AskuraAgent:
             session_id=session_id,
             messages=[],
             conversation_context={},
-            information_slots={},
+            extracted_information_slots={},
             turns=0,
             created_at=now,
             updated_at=now,
@@ -218,7 +217,7 @@ class AskuraAgent:
         # TODO (xmingc): conversation context analysis could be async and occasional.
         logger.info("ConversationManager: Analyzing conversation context")
         conversation_context = self.conversation_manager.analyze_conversation_context(state)
-        state.conversation_context = conversation_context.model_dump()
+        state.conversation_context = conversation_context
 
         # Get recent user messages for unified analysis
         # TODO (xmingc): combine context and memory information.
@@ -247,75 +246,22 @@ class AskuraAgent:
         logger.info("InformationExtractor: Processing user input dynamically")
 
         if not state.messages:
+            logger.warning("InformationExtractor: No messages to extract information from")
             return state
 
         # Get the last user message
-        last_user_msg = next(
-            (msg for msg in reversed(state.messages) if isinstance(msg, HumanMessage)),
-            None,
-        )
+        last_user_msg = next((msg for msg in reversed(state.messages) if isinstance(msg, HumanMessage)), None)
 
         if not last_user_msg:
+            logger.warning("InformationExtractor: No last user message to extract information from")
             return state
 
-        # LLM-based extraction (structured first, then JSON fallback)
-        extracted_info = {}
-        try:
-            if self.llm is not None and self.config.enable_multi_topic_extraction:
-                slot_names = [slot.name for slot in self.config.information_slots]
-
-                # Try structured extraction using a dynamic Pydantic model
-                try:
-                    from typing import Any as _Any  # type: ignore
-                    from typing import Optional
-
-                    from pydantic import create_model  # type: ignore
-
-                    fields = {name: (Optional[_Any], None) for name in slot_names}
-                    Extracted = create_model("Extracted", **fields)  # type: ignore
-                    prompt = (
-                        "Extract slot values present in the user message. Only include keys that you can fill.\n"
-                        f"Slots: {slot_names}.\n"
-                        f"Message: {last_user_msg.content}"
-                    )
-                    structured = self.llm.structured_completion(
-                        messages=[{"role": "user", "content": prompt}],
-                        response_model=Extracted,  # type: ignore
-                        temperature=0,
-                        max_tokens=300,
-                    )
-                    data = structured.model_dump() if hasattr(structured, "model_dump") else dict(structured)
-                    if isinstance(data, dict):
-                        extracted_info.update({k: v for k, v in data.items() if v not in (None, "", [])})
-                except Exception:
-                    # Fallback to JSON chat completion
-                    import json as _json
-
-                    prompt = (
-                        "Extract values for these slots if present in the user message. Return strict JSON mapping each slot to its value or null.\n"
-                        f"Slots: {slot_names}.\nMessage: {last_user_msg.content}"
-                    )
-                    resp = self.llm.chat_completion(
-                        messages=[{"role": "user", "content": prompt}], temperature=0, max_tokens=256
-                    )
-                    try:
-                        parsed = _json.loads(resp)
-                        if isinstance(parsed, dict):
-                            extracted_info.update({k: v for k, v in parsed.items() if v not in (None, "", [])})
-                    except Exception:
-                        pass
-        except Exception:
-            pass
-
-        # Tool-based extraction as primary/backup
-        tool_info = self.information_extractor.extract_all_information(last_user_msg.content)
-        if isinstance(tool_info, dict):
-            extracted_info.update({k: v for k, v in tool_info.items() if v is not None})
-
-        # No hard-coded entity heuristics. Rely on LLM + tools only.
-
-        # Update state with any new information found
+        extracted_info = self.information_extractor.extract_all_information(last_user_msg.content, state)
+        # TODO (xmingc): polish extracted info with LLM.
         state = self.information_extractor.update_state_with_extracted_info(state, extracted_info)
+
+        # Clear the pending_extraction flag after processing
+        state.pending_extraction = False
 
         return state
 
@@ -324,7 +270,7 @@ class AskuraAgent:
         logger.info("QuestionGenerator: Generating contextual question")
 
         next_action = state.next_action_response.next_action
-        conversation_context = ConversationContext(**state.conversation_context)
+        conversation_context = state.conversation_context
 
         # Handle smalltalk reply entirely via LLM (no template)
         if next_action == "reply_smalltalk":
@@ -367,7 +313,7 @@ class AskuraAgent:
             try:
                 if self.llm is not None:
                     # Compose a brief instruction with state context to avoid rigid repetition
-                    info = state.information_slots
+                    info = state.extracted_information_slots
                     guidance = (
                         "Ask one natural, varied question for the missing info. Avoid repeating previous phrasing."
                     )
@@ -454,15 +400,30 @@ class AskuraAgent:
         # If a user message just arrived, prioritize extraction before asking again
         if state.pending_extraction:
             return "information_extractor"
+
+        # Check if we need to summarize or if conversation is complete
         if next_action == "summarize" or state.is_complete:
             return "summarizer"
+
+        # If we need to ask for more information, route to question generator
         if next_action and (next_action == "reply_smalltalk" or next_action.startswith("ask_")):
             return "question_generator"
+
+        # If we need user input, route to human review
         if state.requires_user_input:
             return "human_review"
+
+        # Check if we've reached max turns
         if state.turns >= self.config.max_conversation_turns:
             return "summarizer"
-        return "information_extractor"
+
+        # Default: if we have incomplete information, route to question generator
+        # This prevents infinite loops and ensures we ask for missing information
+        if not self._ready_to_summarize(state):
+            return "question_generator"
+
+        # If all information is complete, route to summarizer
+        return "summarizer"
 
     def _human_review_node(self, state: AskuraState, config: RunnableConfig) -> AskuraState:
         """Human-in-the-loop review node (interrupted before execution)."""
@@ -486,7 +447,7 @@ class AskuraAgent:
 
     def _ready_to_summarize(self, state: AskuraState) -> bool:
         """Check if we have enough information to summarize."""
-        information_slots = state.information_slots
+        information_slots = state.extracted_information_slots
 
         # Check if all required slots are filled
         required_slots_filled = True
@@ -503,7 +464,7 @@ class AskuraAgent:
 
     def _generate_summary(self, state: AskuraState) -> str:
         """Generate a summary of the collected information."""
-        information_slots = state.information_slots
+        information_slots = state.extracted_information_slots
 
         summary_parts = []
         for slot in self.config.information_slots:
@@ -534,7 +495,7 @@ class AskuraAgent:
             metadata={
                 "turns": state.turns,
                 "conversation_context": state.conversation_context,
-                "information_slots": state.information_slots,
+                "information_slots": state.extracted_information_slots,
             },
             custom_data=state.custom_data,
         )
@@ -552,7 +513,7 @@ class AskuraAgent:
 
     def _calculate_confidence(self, state: AskuraState) -> float:
         """Calculate confidence score based on gathered information."""
-        information_slots = state.information_slots
+        information_slots = state.extracted_information_slots
 
         # Count filled slots
         filled_slots = sum(1 for slot in self.config.information_slots if information_slots.get(slot.name))

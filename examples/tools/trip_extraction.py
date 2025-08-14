@@ -1,5 +1,3 @@
-from typing import Any, Dict, Optional
-
 from langchain_core.tools import tool
 
 from cogents.common.llm import get_llm_client_instructor
@@ -12,7 +10,7 @@ llm_client = get_llm_client_instructor(provider="openrouter")
 
 
 @tool
-def extract_trip_plan_context(user_message: str, previous_context: Optional[str] = None) -> Dict[str, Any]:
+def extract_trip_plan_context(user_message: str) -> TripPlanContext:
     """
     Extract comprehensive trip planning information from user messages in a single LLM request.
 
@@ -21,8 +19,6 @@ def extract_trip_plan_context(user_message: str, previous_context: Optional[str]
                      Examples: "Planning a 2-week trip to Japan in spring 2024 for $3000,
                      love cultural experiences and food", "Looking for a budget beach vacation
                      for a family of 4 this summer"
-        previous_context: Optional JSON string of previously extracted context to merge with
-                         new information. Allows for incremental context building.
 
     Returns:
         Dictionary containing comprehensive trip plan context:
@@ -109,8 +105,6 @@ GROUP COMPOSITION:
 - Age information (ages of travelers, age ranges)
 - Special needs (accessibility, dietary restrictions, etc.)
 
-{f"Previous context to merge with: {previous_context}" if previous_context else ""}
-
 User message: {safe_msg}
 
 Extract all available information into the structured format. Set confidence based on how much information was clearly extractable from the message."""
@@ -138,7 +132,7 @@ Extract all available information into the structured format. Set confidence bas
         result.extracted_fields = extracted_fields
 
         logger.info(f"Extracted comprehensive context - Fields: {extracted_fields}, Confidence: {result.confidence}")
-        return result.model_dump()
+        return result
 
     except Exception as e:
         raise RuntimeError(f"Error extracting trip plan context: {e}")

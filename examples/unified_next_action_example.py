@@ -24,7 +24,7 @@ def create_sample_conversation_state(purpose: str, messages: list) -> AskuraStat
         session_id="test_session",
         user_id="test_user",
         messages=messages,
-        information_slots={},
+        extracted_information_slots={},
         conversation_purposes=[purpose],
         metadata={},
     )

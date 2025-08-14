@@ -3,7 +3,7 @@ Schemas for AskuraAgent - Flexible data structures for dynamic conversations.
 """
 
 from enum import Enum
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Dict, List, Optional, Sequence, Type
 
 from langchain_core.messages import BaseMessage
 from pydantic import BaseModel, Field
@@ -67,7 +67,8 @@ class InformationSlot(BaseModel):
     description: str
     priority: int = Field(default=1, description="Higher number = higher priority")
     required: bool = Field(default=True)
-    extraction_tools: List[str] = Field(default_factory=list)
+    extraction_tools: List[str] = Field(default_factory=list, description="Names of extraction tools to use")
+    extraction_model: Optional[Type[BaseModel]] = Field(default=None, description="Pydantic model class for extraction")
     question_templates: Dict[str, Dict[str, Dict[str, str]]] = Field(default_factory=dict)
     validation_rules: List[str] = Field(default_factory=list)
     dependencies: List[str] = Field(default_factory=list, description="Other slots this depends on")
@@ -136,10 +137,10 @@ class AskuraState(BaseModel):
 
     # Conversation state
     messages: Sequence[BaseMessage] = Field(default_factory=list)
-    conversation_context: Dict[str, Any] = Field(default_factory=dict)
+    conversation_context: ConversationContext = Field(default_factory=ConversationContext)
 
     # Information slots (dynamic based on configuration)
-    information_slots: Dict[str, Any] = Field(default_factory=dict)
+    extracted_information_slots: Dict[str, Any] = Field(default_factory=dict)
 
     # Metadata
     turns: int = Field(default=0)
@@ -193,7 +194,7 @@ class AskuraConfig(BaseModel):
     max_tokens: int = 1000
 
     # Conversation limits
-    max_conversation_turns: int = 15
+    max_conversation_turns: int = 10
     max_conversation_time: Optional[int] = None  # seconds
 
     # Purposes of the conversation
@@ -209,7 +210,6 @@ class AskuraConfig(BaseModel):
     enable_confidence_boosting: bool = True
 
     # Extraction configuration
-    enable_multi_topic_extraction: bool = True
     extraction_retry_attempts: int = 2
     extraction_timeout: float = 5.0
 

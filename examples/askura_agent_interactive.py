@@ -13,13 +13,7 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 
-from tools.trip_extraction import (
-    extract_budget_info,
-    extract_date_info,
-    extract_destination_info,
-    extract_group_info,
-    extract_interests_info,
-)
+from tools.enhanced_trip_extraction import TripPlanContext, extract_trip_plan_context_simple
 
 from cogents.agents.askura_agent import AskuraAgent
 from cogents.agents.askura_agent.schemas import AskuraConfig, InformationSlot
@@ -29,50 +23,17 @@ def create_travel_planning_config() -> AskuraConfig:
     """Create configuration for a simple trip planning scenario."""
     information_slots = [
         InformationSlot(
-            name="destination",
-            description="Travel destination",
+            name="trip_plan_context",
+            description="Detailed travel plan, such as destination, dates, budget, interests, group size, etc.",
             priority=5,
             required=True,
-            extraction_tools=["extract_destination_info"],
-        ),
-        InformationSlot(
-            name="dates",
-            description="Travel dates",
-            priority=4,
-            required=True,
-            extraction_tools=["extract_date_info"],
-        ),
-        InformationSlot(
-            name="budget",
-            description="Travel budget",
-            priority=3,
-            required=True,
-            extraction_tools=["extract_budget_info"],
-        ),
-        InformationSlot(
-            name="interests",
-            description="Travel interests",
-            priority=2,
-            required=False,
-            extraction_tools=["extract_interests_info"],
-        ),
-        InformationSlot(
-            name="group",
-            description="Group info (size, composition)",
-            priority=1,
-            required=False,
-            extraction_tools=["extract_group_info"],
-        ),
+            extraction_tools=["extract_trip_plan_context_simple"],
+            extraction_model=TripPlanContext,
+        )
     ]
-
     return AskuraConfig(
-        model_name="gpt-4o-mini",
-        temperature=0.7,
-        max_tokens=1000,
-        max_conversation_turns=12,
         information_slots=information_slots,
         conversation_purposes=["collect user information about the next planned trip"],
-        custom_config={"use_case": "travel_planning"},
     )
 
 
@@ -84,13 +45,7 @@ def interactive_loop() -> None:
     print("=" * 80)
 
     config = create_travel_planning_config()
-    extraction_tools = {
-        "extract_destination_info": extract_destination_info,
-        "extract_date_info": extract_date_info,
-        "extract_budget_info": extract_budget_info,
-        "extract_interests_info": extract_interests_info,
-        "extract_group_info": extract_group_info,
-    }
+    extraction_tools = {"extract_trip_plan_context_simple": extract_trip_plan_context_simple}
     agent = AskuraAgent(config=config, extraction_tools=extraction_tools)
 
     # Start the conversation
