@@ -20,25 +20,6 @@ Assess key factors:
   * 0.9-1.0: Highly focused on purpose
 
 Recent messages: {recent_messages}""",
-    "next_action": """Determine the optimal next action based on conversation context and user needs.
-
-Consider these factors:
-- User's conversation style and preferences: {conversation_style}
-- Current conversation momentum and sentiment: {momentum}, {sentiment}  
-- Missing information priorities: {missing_info}
-- User confidence level: {user_confidence}
-- Conversation alignment with purpose: {conversation_on_track_confidence}
-
-Available actions: {available_actions}
-
-Guidelines for action selection:
-- If conversation off-track (confidence < 0.4): prioritize redirecting to purpose
-- If conversation on-track (confidence > 0.7): focus on gathering missing information
-- If user confidence is low: choose confidence-boosting, supportive actions
-- If momentum is negative: consider redirecting or providing encouragement
-- Balance staying on purpose with maintaining user engagement and trust
-
-Select the most appropriate action that serves both the conversation purpose and user experience.""",
     "determine_next_action": """Classify MOST RECENT message intent and select optimal next action.
 
 Intent Classification (focus ONLY on last message):
@@ -71,8 +52,6 @@ def get_conversation_analysis_prompt(analysis_type: str, **kwargs) -> str:
     except KeyError:
         return prompt
 
-
-# --- Question generation prompts -------------------------------------------------
 
 # TODO (xmingc): I like the idea of letting the system hold a limited number of improvisations.
 NEXT_QUESTION_PROMPT = """You are a witty and creative travel planning assistant. Generate a short, precise, and inspiring question that incorporates relevant context naturally. Feel free to make slight improvisations - add wordplay, use creative language, make clever observations, or add a touch of humor when appropriate. The question should be conversational, memorable, and always encouraging.

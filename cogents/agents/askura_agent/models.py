@@ -9,7 +9,6 @@ from langchain_core.messages import BaseMessage
 from pydantic import BaseModel, Field
 
 from cogents.common.consts import GEMINI_FLASH
-from cogents.common.utils import get_enum_value
 
 
 class ConversationStyle(str, Enum):
@@ -89,36 +88,6 @@ class InformationSlot(BaseModel):
 
         use_enum_values = True
 
-    def __str__(self) -> str:
-        """Return JSON string representation for f-string compatibility."""
-        return self.model_dump_json()
-
-    def __repr__(self) -> str:
-        """Return JSON string representation for debugging."""
-        return self.model_dump_json()
-
-
-class ExtractionResult(BaseModel):
-    """Result of information extraction."""
-
-    slot_name: str
-    extracted_value: Any
-    confidence: float
-    extraction_method: str
-    raw_text: str
-    metadata: Dict[str, Any] = Field(default_factory=dict)
-
-
-class QuestionTemplate(BaseModel):
-    """Template for generating questions."""
-
-    action: str
-    style: ConversationStyle
-    depth: ConversationDepth
-    template: str
-    contextual_elements: List[str] = Field(default_factory=list)
-    conditions: Dict[str, Any] = Field(default_factory=dict)
-
 
 class ConversationContext(BaseModel):
     """Analysis of conversation context."""
@@ -145,26 +114,18 @@ class ConversationContext(BaseModel):
 
         use_enum_values = True
 
-    def __str__(self) -> str:
-        """Return concise string representation for f-string compatibility."""
-        return f"ConversationContext(confidence={self.conversation_on_track_confidence:.1f}, style={self.conversation_style})"
-
-    def __repr__(self) -> str:
-        """Return concise representation for debugging."""
-        return f"ConversationContext(confidence={self.conversation_on_track_confidence:.1f}, style={self.conversation_style}, missing={len(self.missing_info)})"
-
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
         return {
             "conversation_purpose": self.conversation_purpose,
             "conversation_on_track_confidence": self.conversation_on_track_confidence,
-            "conversation_style": get_enum_value(self.conversation_style),
+            "conversation_style": self.conversation_style.value,
             "information_density": self.information_density,
-            "conversation_depth": get_enum_value(self.conversation_depth),
-            "user_confidence": get_enum_value(self.user_confidence),
-            "conversation_flow": get_enum_value(self.conversation_flow),
-            "sentiment": get_enum_value(self.last_message_sentiment),
-            "momentum": get_enum_value(self.conversation_momentum),
+            "conversation_depth": self.conversation_depth.value,
+            "user_confidence": self.user_confidence.value,
+            "conversation_flow": self.conversation_flow.value,
+            "sentiment": self.last_message_sentiment.value,
+            "momentum": self.conversation_momentum.value,
             "missing_info": self.missing_info,
             "suggested_next_topics": self.suggested_next_topics,
         }
@@ -201,26 +162,6 @@ class AskuraState(BaseModel):
         """Pydantic configuration."""
 
         use_enum_values = True
-
-    def __str__(self) -> str:
-        """Return concise string representation for f-string compatibility."""
-        return f"AskuraState(session={self.session_id[:8]}, turns={self.turns}, complete={self.is_complete})"
-
-    def __repr__(self) -> str:
-        """Return concise representation for debugging."""
-        return f"AskuraState(user={self.user_id}, session={self.session_id[:8]}, turns={self.turns}, slots={len(self.extracted_slots)})"
-
-    def __getitem__(self, key: str) -> Any:
-        """Allow dictionary-like access to model fields."""
-        return getattr(self, key)
-
-    def __setitem__(self, key: str, value: Any) -> None:
-        """Allow dictionary-like setting of model fields."""
-        setattr(self, key, value)
-
-    def get(self, key: str, default: Any = None) -> Any:
-        """Allow dictionary-like get method."""
-        return getattr(self, key, default)
 
 
 class AskuraConfig(BaseModel):
