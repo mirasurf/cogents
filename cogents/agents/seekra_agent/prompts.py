@@ -1,5 +1,5 @@
 """
-Prompts for the DeepResearcher agent.
+Prompts for the SeekraAgent agent.
 """
 
 from typing import Dict

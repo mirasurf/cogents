@@ -1,5 +1,5 @@
 """
-State definitions for the DeepResearcher agent.
+State definitions for the SeekraAgent agent.
 """
 
 from __future__ import annotations

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Simplified DeepResearcher Example
+Simplified SeekraAgent Example
 
-This script demonstrates the core functionality of the DeepResearcher agent.
+This script demonstrates the core functionality of the SeekraAgent agent.
 The main logic is: initialize → research → display results → save to file
 """
 
@@ -14,12 +14,12 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from cogents.agents.deep_researcher import Configuration as DeepResearcherConfig
-from cogents.agents.deep_researcher import DeepResearcher
+from cogents.agents.seekra_agent import Configuration as SeekraAgentConfig
+from cogents.agents.seekra_agent import SeekraAgent
 
 
 def main():
-    """Simple example of DeepResearcher core functionality with file output."""
+    """Simple example of SeekraAgent core functionality with file output."""
 
     # 1. Check environment setup
     if not os.getenv("OPENROUTER_API_KEY") or not os.getenv("GEMINI_API_KEY"):
@@ -27,9 +27,9 @@ def main():
         return
 
     # 2. Initialize the researcher
-    print("🚀 Initializing DeepResearcher...")
-    researcher = DeepResearcher(
-        configuration=DeepResearcherConfig(
+    print("🚀 Initializing SeekraAgent...")
+    researcher = SeekraAgent(
+        configuration=SeekraAgentConfig(
             search_engine="google",
             number_of_initial_queries=2,
             max_research_loops=2,

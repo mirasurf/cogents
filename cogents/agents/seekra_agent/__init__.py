@@ -1,5 +1,5 @@
 """
-DeepResearcher Module
+SeekraAgent Module
 
 This module provides advanced research capabilities using LangGraph and LLM integration
 with OpenRouter.
@@ -16,12 +16,12 @@ setup_logging(level="INFO", enable_colors=True)
 
 from .configuration import Configuration
 from .prompts import get_research_prompts
-from .researcher import DeepResearcher
+from .researcher import SeekraAgent
 from .schemas import Reflection, SearchQueryList
 from .state import Query, QueryState, ReflectionState, ResearchState, WebSearchState
 
 __all__ = [
-    "DeepResearcher",
+    "SeekraAgent",
     "ResearchState",
     "QueryState",
     "WebSearchState",

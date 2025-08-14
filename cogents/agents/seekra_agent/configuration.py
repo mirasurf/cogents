@@ -1,5 +1,5 @@
 """
-Configuration management for the DeepResearcher agent.
+Configuration management for the SeekraAgent agent.
 Based on the gemini-fullstack-langgraph-quickstart backend configuration.
 """
 
@@ -13,7 +13,7 @@ from cogents.common.consts import GEMINI_FLASH
 
 
 class Configuration(BaseModel):
-    """The configuration for the DeepResearcher agent."""
+    """The configuration for the SeekraAgent agent."""
 
     query_generator_model: str = Field(
         default=GEMINI_FLASH,

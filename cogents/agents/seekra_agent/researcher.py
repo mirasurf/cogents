@@ -1,5 +1,5 @@
 """
-DeepResearcher implementation using LangGraph and LLM integration.
+SeekraAgent implementation using LangGraph and LLM integration.
 Enhanced base class designed for extensibility.
 """
 
@@ -30,7 +30,7 @@ def get_current_date() -> str:
     return datetime.now().strftime("%B %d, %Y")
 
 
-class DeepResearcher(BaseResearcher):
+class SeekraAgent(BaseResearcher):
     """
     Advanced research agent using LangGraph and LLM integration.
     Base class designed for extensibility with hooks for specialized researchers.
@@ -47,7 +47,7 @@ class DeepResearcher(BaseResearcher):
 
     def __init__(self, configuration: Optional[Configuration] = None):
         """
-        Initialize the DeepResearcher.
+        Initialize the SeekraAgent.
         Requires OPENROUTER_API_KEY, GEMINI_API_KEY, and instructor library.
         OPENROUTER_API_KEY is required for LLM functionality.
         GEMINI_API_KEY is required for real web search capabilities.
