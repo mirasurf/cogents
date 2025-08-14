@@ -13,7 +13,7 @@ from langgraph.types import Send
 
 from cogents.agents.base import BaseResearcher, ResearchOutput
 from cogents.common.langsmith import configure_langsmith
-from cogents.common.llm.openrouter import get_llm_client_instructor
+from cogents.common.llm import get_llm_client_instructor
 from cogents.common.logging import get_logger
 
 from .configuration import Configuration
@@ -61,7 +61,7 @@ class DeepResearcher(BaseResearcher):
         configure_langsmith()
 
         # Initialize LLM client with instructor support
-        self.llm_client = get_llm_client_instructor()
+        self.llm_client = get_llm_client_instructor(provider="openrouter")
 
         # Load prompts (can be overridden by subclasses)
         self.prompts = self.get_prompts()

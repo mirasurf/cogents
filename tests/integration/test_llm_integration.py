@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from cogents.common.llm.openrouter import LLMClient
+from cogents.common.llm import get_llm_client
 
 
 @pytest.mark.integration
@@ -26,7 +26,7 @@ class TestLLMIntegration:
         if not os.getenv("OPENROUTER_API_KEY"):
             pytest.skip("OPENROUTER_API_KEY not set in environment")
 
-        self.client = LLMClient()
+        self.client = get_llm_client(provider="openrouter")
 
     def test_chat_completion_with_gemini(self):
         """Test chat completion with Gemini model."""

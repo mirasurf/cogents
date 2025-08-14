@@ -10,8 +10,8 @@ This module provides:
 """
 
 import base64
-import logging
 import os
+import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Type, TypeVar, Union
 
@@ -21,13 +21,11 @@ from openai import OpenAI
 
 from cogents.common.langsmith import configure_langsmith, is_langsmith_enabled
 from cogents.common.llm.base import BaseLLMClient
+from cogents.common.logging import get_logger
 
 T = TypeVar("T")
 
-# Configure logging
-log_level = os.getenv("LOG_LEVEL", "INFO").upper()
-logging.basicConfig(level=getattr(logging, log_level, logging.INFO))
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class LLMClient(BaseLLMClient):
@@ -40,6 +38,7 @@ class LLMClient(BaseLLMClient):
         instructor: bool = False,
         chat_model: Optional[str] = None,
         vision_model: Optional[str] = None,
+        **kwargs,
     ):
         """
         Initialize the LLM client.
@@ -50,6 +49,7 @@ class LLMClient(BaseLLMClient):
             instructor: Whether to enable instructor for structured output
             chat_model: Model to use for chat completions (defaults to gpt-3.5-turbo)
             vision_model: Model to use for vision tasks (defaults to gpt-4-vision-preview)
+            **kwargs: Additional arguments to pass to the LLM client
         """
         # Configure LangSmith tracing for observability
         configure_langsmith()
@@ -66,7 +66,7 @@ class LLMClient(BaseLLMClient):
         self.base_url = base_url or os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
 
         # Initialize OpenAI client
-        client_kwargs = {"api_key": self.api_key}
+        client_kwargs = {"api_key": self.api_key, **kwargs}
         if self.base_url:
             client_kwargs["base_url"] = self.base_url
 
@@ -108,14 +108,12 @@ class LLMClient(BaseLLMClient):
         Returns:
             Generated text response or streaming response
         """
-        try:
-            # Add LangSmith metadata for tracing
-            if is_langsmith_enabled():
-                # Add model information to kwargs for better tracing
-                kwargs.setdefault("extra_headers", {})
-                kwargs["extra_headers"]["X-LangSmith-Model"] = self.chat_model
-                kwargs["extra_headers"]["X-LangSmith-Provider"] = self._langsmith_provider
+        if is_langsmith_enabled():
+            kwargs.setdefault("extra_headers", {})
+            kwargs["extra_headers"]["X-LangSmith-Model"] = self.chat_model
+            kwargs["extra_headers"]["X-LangSmith-Provider"] = self._langsmith_provider
 
+        try:
             response = self.client.chat.completions.create(
                 model=self.chat_model,
                 messages=messages,
@@ -124,12 +122,10 @@ class LLMClient(BaseLLMClient):
                 stream=stream,
                 **kwargs,
             )
-
             if stream:
                 return response
             else:
                 return response.choices[0].message.content
-
         except Exception as e:
             logger.error(f"Error in chat completion: {e}")
             raise
@@ -140,6 +136,8 @@ class LLMClient(BaseLLMClient):
         response_model: Type[T],
         temperature: float = 0.7,
         max_tokens: Optional[int] = None,
+        attempts: int = 2,
+        backoff: float = 0.5,
         **kwargs,
     ) -> T:
         """
@@ -150,6 +148,8 @@ class LLMClient(BaseLLMClient):
             response_model: Pydantic model class for structured output
             temperature: Sampling temperature (0.0 to 2.0)
             max_tokens: Maximum tokens to generate
+            attempts: Number of attempts to make
+            backoff: Backoff factor for exponential backoff
             **kwargs: Additional arguments to pass to instructor
 
         Returns:
@@ -158,28 +158,34 @@ class LLMClient(BaseLLMClient):
         if not self.instructor:
             raise ValueError("Instructor is not enabled. Initialize LLMClient with instructor=True")
 
-        try:
-            # Add LangSmith metadata for structured completion tracing
-            if is_langsmith_enabled():
-                kwargs.setdefault("extra_headers", {})
-                kwargs["extra_headers"]["X-LangSmith-Model"] = self.chat_model
-                kwargs["extra_headers"]["X-LangSmith-Provider"] = self._langsmith_provider
-                kwargs["extra_headers"]["X-LangSmith-Type"] = "structured"
-                kwargs["extra_headers"]["X-LangSmith-Response-Model"] = response_model.__name__
+        # Add LangSmith metadata for structured completion tracing
+        if is_langsmith_enabled():
+            kwargs.setdefault("extra_headers", {})
+            kwargs["extra_headers"]["X-LangSmith-Model"] = self.chat_model
+            kwargs["extra_headers"]["X-LangSmith-Provider"] = self._langsmith_provider
+            kwargs["extra_headers"]["X-LangSmith-Type"] = "structured"
+            kwargs["extra_headers"]["X-LangSmith-Response-Model"] = response_model.__name__
 
-            result = self.instructor.create(
-                model=self.chat_model,
-                messages=messages,
-                response_model=response_model,
-                temperature=temperature,
-                max_tokens=max_tokens,
-                **kwargs,
-            )
-            return result
-
-        except Exception as e:
-            logger.error(f"Error in structured completion: {e}")
-            raise
+        last_err = None
+        for i in range(attempts):
+            try:
+                result = self.instructor.create(
+                    model=self.chat_model,
+                    messages=messages,
+                    response_model=response_model,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    **kwargs,
+                )
+                return result
+            except Exception as e:
+                last_err = e
+                if i < attempts - 1:
+                    time.sleep(backoff * (2**i))
+                else:
+                    logger.error(f"Error in structured completion: {e}")
+                    raise
+        raise last_err
 
     def understand_image(
         self,
@@ -202,6 +208,12 @@ class LLMClient(BaseLLMClient):
         Returns:
             Analysis of the image
         """
+        if is_langsmith_enabled():
+            kwargs.setdefault("extra_headers", {})
+            kwargs["extra_headers"]["X-LangSmith-Model"] = self.vision_model
+            kwargs["extra_headers"]["X-LangSmith-Provider"] = self._langsmith_provider
+            kwargs["extra_headers"]["X-LangSmith-Type"] = "vision"
+
         try:
             # Read and encode the image
             image_path = Path(image_path)
@@ -225,13 +237,6 @@ class LLMClient(BaseLLMClient):
                     ],
                 }
             ]
-
-            # Add LangSmith metadata for vision completion tracing
-            if is_langsmith_enabled():
-                kwargs.setdefault("extra_headers", {})
-                kwargs["extra_headers"]["X-LangSmith-Model"] = self.vision_model
-                kwargs["extra_headers"]["X-LangSmith-Provider"] = self._langsmith_provider
-                kwargs["extra_headers"]["X-LangSmith-Type"] = "vision"
 
             response = self.client.chat.completions.create(
                 model=self.vision_model,
@@ -268,6 +273,12 @@ class LLMClient(BaseLLMClient):
         Returns:
             Analysis of the image
         """
+        if is_langsmith_enabled():
+            kwargs.setdefault("extra_headers", {})
+            kwargs["extra_headers"]["X-LangSmith-Model"] = self.vision_model
+            kwargs["extra_headers"]["X-LangSmith-Provider"] = self._langsmith_provider
+            kwargs["extra_headers"]["X-LangSmith-Type"] = "vision-url"
+
         try:
             messages = [
                 {
@@ -278,13 +289,6 @@ class LLMClient(BaseLLMClient):
                     ],
                 }
             ]
-
-            # Add LangSmith metadata for vision completion tracing
-            if is_langsmith_enabled():
-                kwargs.setdefault("extra_headers", {})
-                kwargs["extra_headers"]["X-LangSmith-Model"] = self.vision_model
-                kwargs["extra_headers"]["X-LangSmith-Provider"] = self._langsmith_provider
-                kwargs["extra_headers"]["X-LangSmith-Type"] = "vision-url"
 
             response = self.client.chat.completions.create(
                 model=self.vision_model,

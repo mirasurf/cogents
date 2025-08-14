@@ -7,8 +7,15 @@ T = TypeVar("T")
 
 
 class LLMClient(BaseLLMClient):
-    def __init__(self, instructor: bool = False):
-        super().__init__(instructor=instructor)
+    def __init__(
+        self,
+        base_url: Optional[str] = None,
+        api_key: Optional[str] = None,
+        instructor: bool = False,
+        chat_model: Optional[str] = None,
+        vision_model: Optional[str] = None,
+    ):
+        pass
 
     def chat_completion(
         self,

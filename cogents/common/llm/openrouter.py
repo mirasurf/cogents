@@ -9,23 +9,13 @@ This module provides:
 - LangSmith tracing for observability
 """
 
-import logging
 import os
 from typing import Optional, TypeVar
-
-from deprecated import deprecated
 
 from cogents.common.consts import GEMINI_FLASH
 from cogents.common.llm.openai import LLMClient as OpenAILLMClient
 
-# Import instructor for structured output
-
 T = TypeVar("T")
-
-# Configure logging
-log_level = os.getenv("LOG_LEVEL", "INFO").upper()
-logging.basicConfig(level=getattr(logging, log_level, logging.INFO))
-logger = logging.getLogger(__name__)
 
 
 class LLMClient(OpenAILLMClient):
@@ -38,6 +28,7 @@ class LLMClient(OpenAILLMClient):
         instructor: bool = False,
         chat_model: Optional[str] = None,
         vision_model: Optional[str] = None,
+        **kwargs,
     ):
         """
         Initialize the LLM client.
@@ -48,6 +39,7 @@ class LLMClient(OpenAILLMClient):
             instructor: Whether to enable instructor for structured output
             chat_model: Model to use for chat completions (defaults to gemini-flash)
             vision_model: Model to use for vision tasks (defaults to gemini-flash)
+            **kwargs: Additional arguments to pass to OpenAILLMClient
         """
         self.openrouter_api_key = api_key or os.getenv("OPENROUTER_API_KEY")
         if not self.openrouter_api_key:
@@ -67,29 +59,8 @@ class LLMClient(OpenAILLMClient):
             instructor=instructor,
             chat_model=self.chat_model,
             vision_model=self.vision_model,
+            **kwargs,
         )
 
         # Configure LangSmith tracing for observability
         self._langsmith_provider = "openrouter"
-
-
-@deprecated(reason="Use `cogents.common.llm.get_llm_client` instead.")
-def get_llm_client(instructor: bool = False) -> LLMClient:
-    """
-    Get an LLM client instance.
-
-    Returns:
-        LLMClient instance
-    """
-    return LLMClient(instructor=instructor)
-
-
-@deprecated(reason="Use `cogents.common.llm.get_llm_client` instead.")
-def get_llm_client_instructor() -> LLMClient:
-    """
-    Get an LLM client instance with instructor support.
-
-    Returns:
-        LLMClient instance with instructor enabled
-    """
-    return LLMClient(instructor=True)

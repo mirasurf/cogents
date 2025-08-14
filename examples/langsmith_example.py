@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from cogents.common.langsmith import get_langsmith_project, is_langsmith_enabled
-from cogents.common.llm.openrouter import get_llm_client, get_llm_client_instructor
+from cogents.common.llm import get_llm_client, get_llm_client_instructor
 
 
 def test_basic_chat():
@@ -28,7 +28,7 @@ def test_basic_chat():
     else:
         print("⚠️  LangSmith tracing is not enabled")
 
-    client = get_llm_client()
+    client = get_llm_client(provider="openrouter")
 
     messages = [
         {"role": "system", "content": "You are a helpful travel assistant."},
@@ -60,7 +60,7 @@ def test_structured_completion():
             attractions: List[Attraction]
             best_time_to_visit: str
 
-        client = get_llm_client_instructor()
+        client = get_llm_client_instructor(provider="openrouter")
 
         messages = [
             {
@@ -94,7 +94,7 @@ def test_vision_capability():
     """Test vision understanding with LangSmith tracing."""
     print("\n🧪 Testing vision capability...")
 
-    client = get_llm_client()
+    client = get_llm_client(provider="openrouter")
 
     # Test with a publicly available image URL
     image_url = "https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/PNG_transparency_demonstration_1.png/280px-PNG_transparency_demonstration_1.png"

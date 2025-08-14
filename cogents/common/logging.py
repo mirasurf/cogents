@@ -13,6 +13,7 @@ Usage:
 """
 
 import logging
+import os
 import sys
 from pathlib import Path
 from typing import Dict, Optional
@@ -21,6 +22,11 @@ try:
     import colorlog
 except ImportError:
     colorlog = None  # fallback if colorlog is not installed
+
+# Configure logging
+log_level = os.getenv("LOG_LEVEL", "INFO").upper()
+logging.basicConfig(level=getattr(logging, log_level, logging.INFO))
+logger = logging.getLogger(__name__)
 
 
 def setup_logging(

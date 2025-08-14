@@ -14,6 +14,10 @@ __all__ = [
     "get_llm_client_instructor",
 ]
 
+#############################
+# Common LLM helper functions
+#############################
+
 
 def get_llm_client(
     provider: str = "openai",
@@ -43,7 +47,14 @@ def get_llm_client(
         ValueError: If provider is not supported
     """
     if provider == "openrouter":
-        return OpenRouterLLMClient(instructor=instructor, **kwargs)
+        return OpenRouterLLMClient(
+            base_url=base_url,
+            api_key=api_key,
+            instructor=instructor,
+            chat_model=chat_model,
+            vision_model=vision_model,
+            **kwargs,
+        )
     elif provider == "openai":
         return OpenAILLMClient(
             base_url=base_url,
@@ -54,7 +65,14 @@ def get_llm_client(
             **kwargs,
         )
     elif provider == "ollama":
-        return OllamaLLMClient(instructor=instructor, **kwargs)
+        return OllamaLLMClient(
+            base_url=base_url,
+            api_key=api_key,
+            instructor=instructor,
+            chat_model=chat_model,
+            vision_model=vision_model,
+            **kwargs,
+        )
     else:
         raise ValueError(f"Unsupported provider: {provider}. Supported providers: openrouter, openai, ollama")
 

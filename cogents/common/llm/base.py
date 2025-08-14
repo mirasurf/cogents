@@ -8,12 +8,12 @@ T = TypeVar("T")
 class BaseLLMClient(ABC):
     """Client for interacting with LLMs via OpenRouter using OpenAI SDK."""
 
-    def __init__(self, instructor: bool = False):
+    def __init__(self, **kwargs):
         """
         Initialize the LLM client.
 
         Args:
-            instructor: Whether to enable instructor for structured output
+            **kwargs: Additional arguments to pass to the LLM client
         """
 
     @abstractmethod
@@ -46,6 +46,8 @@ class BaseLLMClient(ABC):
         response_model: Type[T],
         temperature: float = 0.7,
         max_tokens: Optional[int] = None,
+        attempts: int = 2,
+        backoff: float = 0.5,
         **kwargs,
     ) -> T:
         """
@@ -56,6 +58,8 @@ class BaseLLMClient(ABC):
             response_model: Pydantic model class for structured output
             temperature: Sampling temperature (0.0 to 2.0)
             max_tokens: Maximum tokens to generate
+            attempts: Number of attempts to make
+            backoff: Backoff factor for exponential backoff
             **kwargs: Additional arguments to pass to instructor
 
         Returns:
