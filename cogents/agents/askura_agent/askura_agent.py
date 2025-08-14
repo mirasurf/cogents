@@ -22,9 +22,8 @@ from cogents.common.logging import get_logger
 
 from .conversation_manager import ConversationManager
 from .information_extractor import InformationExtractor
+from .models import AskuraConfig, AskuraResponse, AskuraState
 from .nodes import AskuraNodes
-from .question_generator import QuestionGenerator
-from .schemas import AskuraConfig, AskuraResponse, AskuraState
 
 logger = get_logger(__name__)
 
@@ -50,12 +49,10 @@ class AskuraAgent:
         # Initialize components (pass LLM client to enable intelligent behavior)
         self.conversation_manager = ConversationManager(config, llm_client=self.llm)
         self.information_extractor = InformationExtractor(config, self.extraction_tools, llm_client=self.llm)
-        self.question_generator = QuestionGenerator(config, llm_client=self.llm)
         self.nodes = AskuraNodes(
             config=config,
             conversation_manager=self.conversation_manager,
             information_extractor=self.information_extractor,
-            question_generator=self.question_generator,
             llm_client=self.llm,
         )
 
@@ -76,8 +73,8 @@ class AskuraAgent:
             user_id=user_id,
             session_id=session_id,
             messages=[],
-            conversation_context={},
-            extracted_information_slots={},
+            chat_context={},
+            extracted_slots={},
             turns=0,
             created_at=now,
             updated_at=now,
@@ -252,12 +249,12 @@ class AskuraAgent:
             session_id=state.session_id,
             is_complete=state.is_complete,
             confidence=self._calculate_confidence(state),
-            next_actions=[state.next_action_ayalysis.next_action] if state.next_action_ayalysis else [],
+            next_actions=[state.next_action_plan.next_action] if state.next_action_plan else [],
             requires_user_input=state.requires_user_input,
             metadata={
                 "turns": state.turns,
-                "conversation_context": state.conversation_context,
-                "information_slots": state.extracted_information_slots,
+                "conversation_context": state.chat_context,
+                "information_slots": state.extracted_slots,
             },
             custom_data=state.custom_data,
         )
@@ -275,7 +272,7 @@ class AskuraAgent:
 
     def _calculate_confidence(self, state: AskuraState) -> float:
         """Calculate confidence score based on gathered information."""
-        information_slots = state.extracted_information_slots
+        information_slots = state.extracted_slots
 
         # Count filled slots
         filled_slots = sum(1 for slot in self.config.information_slots if information_slots.get(slot.name))

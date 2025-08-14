@@ -3,12 +3,13 @@ Schemas for AskuraAgent - Flexible data structures for dynamic conversations.
 """
 
 from enum import Enum
-from typing import Any, Dict, List, Optional, Sequence, Type
+from typing import Any, Dict, List, Optional, Sequence, Type, Union
 
 from langchain_core.messages import BaseMessage
 from pydantic import BaseModel, Field
 
 from cogents.common.consts import GEMINI_FLASH
+from cogents.common.utils import get_enum_value
 
 
 class ConversationStyle(str, Enum):
@@ -60,6 +61,16 @@ class ConversationMomentum(str, Enum):
     NEGATIVE = "negative"
 
 
+class NextActionPlan(BaseModel):
+    """Response for intent classification and next action determination."""
+
+    next_action: str = Field(description="The selected next action from available options")
+    intent_type: str = Field(description="Intent classification: 'smalltalk' or 'task'")
+    is_smalltalk: bool = Field(description="Whether the user's intent is smalltalk")
+    reasoning: str = Field(description="Brief explanation of why this action was chosen")
+    confidence: float = Field(default=0.0, description="Confidence score (0.0-1.0) in the action choice")
+
+
 class InformationSlot(BaseModel):
     """Configuration for an information slot to be collected."""
 
@@ -87,21 +98,36 @@ class InformationSlot(BaseModel):
         return self.model_dump_json()
 
 
-class NextActionAnalysis(BaseModel):
-    """Response for intent classification and next action determination."""
+class ExtractionResult(BaseModel):
+    """Result of information extraction."""
 
-    next_action: str = Field(description="The selected next action from available options")
-    intent_type: str = Field(description="Intent classification: 'smalltalk' or 'task'")
-    is_smalltalk: bool = Field(description="Whether the user's intent is smalltalk")
-    reasoning: str = Field(description="Brief explanation of why this action was chosen")
-    confidence: float = Field(default=0.0, description="Confidence score (0.0-1.0) in the action choice")
+    slot_name: str
+    extracted_value: Any
+    confidence: float
+    extraction_method: str
+    raw_text: str
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class QuestionTemplate(BaseModel):
+    """Template for generating questions."""
+
+    action: str
+    style: ConversationStyle
+    depth: ConversationDepth
+    template: str
+    contextual_elements: List[str] = Field(default_factory=list)
+    conditions: Dict[str, Any] = Field(default_factory=dict)
 
 
 class ConversationContext(BaseModel):
     """Analysis of conversation context."""
 
+    # Conversation purpose
     conversation_purpose: str = Field(default="")
     conversation_on_track_confidence: float = Field(default=0.0)
+
+    # Conversation vibe
     conversation_style: ConversationStyle = Field(default=ConversationStyle.DIRECT)
     information_density: float = Field(default=0.0)
     conversation_depth: ConversationDepth = Field(default=ConversationDepth.SURFACE)
@@ -109,8 +135,8 @@ class ConversationContext(BaseModel):
     conversation_flow: ConversationFlow = Field(default=ConversationFlow.NATURAL)
     conversation_momentum: ConversationMomentum = Field(default=ConversationMomentum.POSITIVE)
     last_message_sentiment: ConversationSentiment = Field(default=ConversationSentiment.NEUTRAL)
-    response_patterns: List[str] = Field(default_factory=list)
-    topic_transitions: List[str] = Field(default_factory=list)
+
+    # Complementary information
     missing_info: List[str] = Field(default_factory=list)
     suggested_next_topics: List[str] = Field(default_factory=list)
 
@@ -127,33 +153,46 @@ class ConversationContext(BaseModel):
         """Return concise representation for debugging."""
         return f"ConversationContext(confidence={self.conversation_on_track_confidence:.1f}, style={self.conversation_style}, missing={len(self.missing_info)})"
 
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary."""
+        return {
+            "conversation_purpose": self.conversation_purpose,
+            "conversation_on_track_confidence": self.conversation_on_track_confidence,
+            "conversation_style": get_enum_value(self.conversation_style),
+            "information_density": self.information_density,
+            "conversation_depth": get_enum_value(self.conversation_depth),
+            "user_confidence": get_enum_value(self.user_confidence),
+            "conversation_flow": get_enum_value(self.conversation_flow),
+            "sentiment": get_enum_value(self.last_message_sentiment),
+            "momentum": get_enum_value(self.conversation_momentum),
+            "missing_info": self.missing_info,
+            "suggested_next_topics": self.suggested_next_topics,
+        }
+
 
 class AskuraState(BaseModel):
     """Core state for AskuraAgent conversations."""
 
-    # User identification
+    # Metadata
     user_id: str
     session_id: str
-
-    # Conversation state
-    messages: Sequence[BaseMessage] = Field(default_factory=list)
-    conversation_context: ConversationContext = Field(default_factory=ConversationContext)
-
-    # Information slots (dynamic based on configuration)
-    extracted_information_slots: Dict[str, Any] = Field(default_factory=dict)
-
-    # Metadata
     turns: int = Field(default=0)
     created_at: str = Field(default="")
     updated_at: str = Field(default="")
+
+    # Conversation state
+    messages: Sequence[BaseMessage] = Field(default_factory=list)
+    chat_context: ConversationContext = Field(default_factory=ConversationContext)
+
+    # Information slots (dynamic based on configuration)
+    extracted_slots: Union[str, Dict[str, str]] = Field(default_factory=dict)
+    # Next action analysis results
+    next_action_plan: Optional[NextActionPlan] = Field(default=None)
 
     # Agent control
     requires_user_input: bool = Field(default=True)
     is_complete: bool = Field(default=False)
     pending_extraction: bool = Field(default=False)
-
-    # Next action analysis results
-    next_action_ayalysis: Optional[NextActionAnalysis] = Field(default=None)
 
     # Custom fields (for specific agents)
     custom_data: Dict[str, Any] = Field(default_factory=dict)
@@ -169,7 +208,7 @@ class AskuraState(BaseModel):
 
     def __repr__(self) -> str:
         """Return concise representation for debugging."""
-        return f"AskuraState(user={self.user_id}, session={self.session_id[:8]}, turns={self.turns}, slots={len(self.extracted_information_slots)})"
+        return f"AskuraState(user={self.user_id}, session={self.session_id[:8]}, turns={self.turns}, slots={len(self.extracted_slots)})"
 
     def __getitem__(self, key: str) -> Any:
         """Allow dictionary-like access to model fields."""
@@ -195,28 +234,12 @@ class AskuraConfig(BaseModel):
 
     # Conversation limits
     max_conversation_turns: int = 10
-    max_conversation_time: Optional[int] = None  # seconds
 
     # Purposes of the conversation
     conversation_purposes: List[str] = Field(default_factory=list)
 
     # Information slots configuration
     information_slots: List[InformationSlot] = Field(default_factory=list)
-
-    # Conversation style preferences
-    preferred_conversation_style: Optional[ConversationStyle] = None
-    enable_style_adaptation: bool = True
-    enable_sentiment_analysis: bool = True
-    enable_confidence_boosting: bool = True
-
-    # Extraction configuration
-    extraction_retry_attempts: int = 2
-    extraction_timeout: float = 5.0
-
-    # Question generation
-    enable_contextual_questions: bool = True
-    enable_confidence_boosting_questions: bool = True
-    enable_momentum_maintenance: bool = True
 
     # Custom configuration
     custom_config: Dict[str, Any] = Field(default_factory=dict)
@@ -235,25 +258,3 @@ class AskuraResponse(BaseModel):
 
     # Custom response data
     custom_data: Dict[str, Any] = Field(default_factory=dict)
-
-
-class ExtractionResult(BaseModel):
-    """Result of information extraction."""
-
-    slot_name: str
-    extracted_value: Any
-    confidence: float
-    extraction_method: str
-    raw_text: str
-    metadata: Dict[str, Any] = Field(default_factory=dict)
-
-
-class QuestionTemplate(BaseModel):
-    """Template for generating questions."""
-
-    action: str
-    style: ConversationStyle
-    depth: ConversationDepth
-    template: str
-    contextual_elements: List[str] = Field(default_factory=list)
-    conditions: Dict[str, Any] = Field(default_factory=dict)

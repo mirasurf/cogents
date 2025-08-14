@@ -9,7 +9,7 @@ from langchain_core.tools import BaseTool
 from cogents.common.llm import BaseLLMClient
 from cogents.common.logging import get_logger
 
-from .schemas import AskuraConfig, AskuraState, InformationSlot
+from .models import AskuraConfig, AskuraState, InformationSlot
 
 logger = get_logger(__name__)
 
@@ -36,8 +36,8 @@ class InformationExtractor:
 
         # Get current partial extraction state for context
         current_extractions = {}
-        if current_state and current_state.extracted_information_slots:
-            current_extractions = current_state.extracted_information_slots.copy()
+        if current_state and current_state.extracted_slots:
+            current_extractions = current_state.extracted_slots.copy()
 
         for slot in self.config.information_slots:
             if not slot.extraction_tools:
@@ -53,7 +53,7 @@ class InformationExtractor:
 
     def update_state_with_extracted_info(self, state: AskuraState, extracted_info: Dict[str, Any]) -> AskuraState:
         """Update state with extracted information, handling conflicts and merging data."""
-        info_slots = state.extracted_information_slots
+        info_slots = state.extracted_slots
         for slot_name, extracted_value in extracted_info.items():
             if not info_slots.get(slot_name):
                 # Simple assignment for new values
@@ -63,7 +63,7 @@ class InformationExtractor:
                 # Merge existing values for certain types
                 info_slots[slot_name] = self._merge_values(info_slots[slot_name], extracted_value, slot_name)
                 logger.info(f"Updated slot {slot_name}: {info_slots[slot_name]}")
-        state.extracted_information_slots = info_slots
+        state.extracted_slots = info_slots
         return state
 
     def _extract_slot_information_with_tools(

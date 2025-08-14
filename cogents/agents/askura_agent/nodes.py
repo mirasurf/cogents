@@ -4,17 +4,18 @@ LangGraph node handlers for AskuraAgent, with optimized routing and safeguards.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, List, Optional
 
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph.message import add_messages
 
+from cogents.common.llm import BaseLLMClient
 from cogents.common.logging import get_logger
-from cogents.common.utils import get_enum_value
 
-from .prompts import get_unified_next_question_prompt
-from .schemas import AskuraConfig, AskuraState, InformationSlot
+from .conversation_manager import ConversationManager
+from .information_extractor import InformationExtractor
+from .models import AskuraConfig, AskuraState, InformationSlot
 
 logger = get_logger(__name__)
 
@@ -26,83 +27,19 @@ class AskuraNodes:
         self,
         *,
         config: AskuraConfig,
-        conversation_manager,
-        information_extractor,
-        question_generator,
-        llm_client=None,
+        conversation_manager: ConversationManager,
+        information_extractor: InformationExtractor,
+        llm_client: Optional[BaseLLMClient] = None,
     ) -> None:
         self.config = config
         self.conversation_manager = conversation_manager
         self.information_extractor = information_extractor
-        self.question_generator = question_generator
         self.llm = llm_client
-
-    # --- Helpers -----------------------------------------------------------------
-
-    def _is_slot_complete(self, slot: InformationSlot, value: Any) -> bool:
-        if value in (None, "", [], {}):
-            return False
-        if slot.extraction_model and isinstance(value, dict):
-            try:
-                # Pydantic v2: check required fields on the model
-                required_fields = [
-                    name for name, field in slot.extraction_model.model_fields.items() if field.is_required
-                ]
-                for field_name in required_fields:
-                    if value.get(field_name) in (None, "", [], {}):
-                        return False
-            except Exception:
-                # If introspection fails, fall back to non-empty check
-                return True
-        return True
-
-    def _missing_required_slots(self, state: AskuraState) -> List[InformationSlot]:
-        info = state.extracted_information_slots
-        missing: List[InformationSlot] = []
-        for slot in self.config.information_slots:
-            if slot.required and not self._is_slot_complete(slot, info.get(slot.name)):
-                missing.append(slot)
-        # Highest priority first (larger number means higher priority)
-        missing.sort(key=lambda s: s.priority, reverse=True)
-        return missing
-
-    def _ready_to_summarize(self, state: AskuraState) -> bool:
-        # Summarize only when all required slots are complete
-        return len(self._missing_required_slots(state)) == 0 and state.turns > 1
-
-    def _is_stalled(self, state: AskuraState) -> bool:
-        attempts: Dict[str, int] = state.custom_data.get("slot_question_attempts", {})
-        max_attempts_per_slot = 2
-        too_many_attempts = any(count >= max_attempts_per_slot for count in attempts.values())
-        near_turn_limit = state.turns >= max(self.config.max_conversation_turns - 1, 1)
-        return too_many_attempts or near_turn_limit
-
-    def _choose_next_slot_to_ask(self, state: AskuraState) -> Optional[str]:
-        missing = self._missing_required_slots(state)
-        if not missing:
-            return None
-        # Choose the highest priority missing slot whose dependencies are satisfied
-        info = state.extracted_information_slots
-        for slot in missing:
-            if not slot.dependencies:
-                return slot.name
-            if all(info.get(dep) for dep in slot.dependencies):
-                return slot.name
-        return missing[0].name
-
-    def _increment_slot_attempt(self, state: AskuraState, slot_name: Optional[str]) -> None:
-        if not slot_name:
-            return
-        attempts: Dict[str, int] = state.custom_data.get("slot_question_attempts", {})
-        attempts[slot_name] = attempts.get(slot_name, 0) + 1
-        state.custom_data["slot_question_attempts"] = attempts
-
-    # --- Nodes -------------------------------------------------------------------
 
     def conversation_context_analysis_node(self, state: AskuraState, config: RunnableConfig) -> AskuraState:
         logger.info("ConversationContextAnalysis: Analyzing conversation context")
         conversation_context = self.conversation_manager.analyze_conversation_context(state)
-        state.conversation_context = conversation_context
+        state.chat_context = conversation_context
 
         recent_user_messages = [m.content for m in state.messages if isinstance(m, HumanMessage)][-3:]
         # Store for potential downstream use
@@ -111,7 +48,7 @@ class AskuraNodes:
 
     def determine_next_action_node(self, state: AskuraState, config: RunnableConfig) -> AskuraState:
         logger.info("DetermineNextAction: Selecting next action")
-        conversation_context = state.conversation_context
+        conversation_context = state.chat_context
         # Always extract fresh recent user messages to avoid stale data - optimize for token efficiency
         recent_user_messages = self._format_recent_user_messages(state.messages)
 
@@ -121,7 +58,7 @@ class AskuraNodes:
             recent_messages=recent_user_messages,
             ready_to_summarize=self._ready_to_summarize(state),
         )
-        state.next_action_ayalysis = action_result
+        state.next_action_plan = action_result
         state.turns += 1
         logger.info(
             f"Next action: {action_result.next_action} "
@@ -167,7 +104,7 @@ class AskuraNodes:
 
     def _enrich_context_with_suggestions(self, state: AskuraState, user_message: str) -> None:
         """Enrich context with specific suggestions when user shows interest but lacks knowledge."""
-        trip_context = state.extracted_information_slots.get("trip_plan_context", {})
+        trip_context = state.extracted_slots.get("trip_plan_context", {})
         must_see = trip_context.get("must_see", [])
 
         # Check if user is interested in anime locations but needs suggestions
@@ -196,13 +133,11 @@ class AskuraNodes:
             state.custom_data["enriched_suggestions"]["anime_locations"] = anime_suggestions
 
             # Update the extracted slots
-            if "trip_plan_context" in state.extracted_information_slots:
-                state.extracted_information_slots["trip_plan_context"]["must_see"] = must_see
+            if "trip_plan_context" in state.extracted_slots:
+                state.extracted_slots["trip_plan_context"]["must_see"] = must_see
                 # Increase confidence since we're adding helpful information
-                current_confidence = state.extracted_information_slots["trip_plan_context"].get("confidence", 0.5)
-                state.extracted_information_slots["trip_plan_context"]["confidence"] = min(
-                    current_confidence + 0.1, 1.0
-                )
+                current_confidence = state.extracted_slots["trip_plan_context"].get("confidence", 0.5)
+                state.extracted_slots["trip_plan_context"]["confidence"] = min(current_confidence + 0.1, 1.0)
 
                 logger.info(f"Enhanced context with anime location suggestions: {anime_suggestions}")
 
@@ -222,56 +157,7 @@ class AskuraNodes:
     def question_generator_node(self, state: AskuraState, config: RunnableConfig) -> AskuraState:
         logger.info("QuestionGenerator: Generating contextual question")
 
-        next_action = state.next_action_ayalysis.next_action
-        conversation_context = state.conversation_context
-
-        # Unified next-question generation for both smalltalk and task
-        utterance = None
-        try:
-            if self.llm is not None:
-                info = state.extracted_information_slots
-                missing_required_slots = [s.name for s in self._missing_required_slots(state)]
-                target_slot = self._choose_next_slot_to_ask(state)
-                gap_summary = ", ".join(missing_required_slots) if missing_required_slots else "none"
-                prompt = get_unified_next_question_prompt(
-                    conversation_purposes=self.config.conversation_purposes,
-                    intent_type=state.next_action_ayalysis.intent_type,
-                    next_action_label=next_action,
-                    next_action_reasoning=state.next_action_ayalysis.reasoning,
-                    conversation_style=get_enum_value(conversation_context.conversation_style),
-                    conversation_on_track_confidence=conversation_context.conversation_on_track_confidence,
-                    momentum=get_enum_value(conversation_context.conversation_momentum),
-                    sentiment=get_enum_value(conversation_context.last_message_sentiment),
-                    known_slots=info,
-                    missing_required_slots=missing_required_slots,
-                    missing_info=conversation_context.missing_info,
-                    suggested_next_topics=conversation_context.suggested_next_topics,
-                    target_slot=target_slot or "",
-                    gap_summary=gap_summary,
-                    enriched_suggestions=state.custom_data.get("enriched_suggestions", {}),
-                )
-                utterance = self.llm.chat_completion(
-                    messages=[{"role": "system", "content": prompt}],
-                    temperature=0.6,
-                    max_tokens=64,
-                )
-                if isinstance(utterance, str):
-                    utterance = utterance.strip()
-                if target_slot:
-                    self._increment_slot_attempt(state, target_slot)
-        except Exception:
-            utterance = None
-
-        if not utterance or len(utterance) < 3:
-            # Fallbacks
-            if next_action == "reply_smalltalk":
-                utterance = "What destination are you considering, and when are you hoping to travel?"
-            else:
-                fallback = self.question_generator.generate_contextual_question(
-                    next_action or "ask_info", state, conversation_context
-                )
-                utterance = fallback
-
+        utterance = self.conversation_manager.generate_contextual_question(state)
         ai_message = AIMessage(content=utterance)
         state.messages = add_messages(state.messages, [ai_message])
         state.requires_user_input = True
@@ -298,11 +184,9 @@ class AskuraNodes:
         state.pending_extraction = True
         return state
 
-    # --- Routers -----------------------------------------------------------------
-
     def determine_next_action_router(self, state: AskuraState) -> str:
         logger.info("DetermineNextActionRouter: Routing after next action decision")
-        next_action = state.next_action_ayalysis.next_action
+        next_action = state.next_action_plan.next_action
         if state.pending_extraction:
             return "information_extractor"
         if next_action == "reply_smalltalk" or (next_action and next_action.startswith("ask_")):
@@ -319,12 +203,54 @@ class AskuraNodes:
             return "end"
         return "continue"
 
-    # --- Summary helpers ---------------------------------------------------------
-
     def _generate_summary(self, state: AskuraState) -> str:
-        information_slots = state.extracted_information_slots
+        information_slots = state.extracted_slots
         summary_parts: List[str] = []
         for slot in self.config.information_slots:
             if information_slots.get(slot.name):
                 summary_parts.append(f"{slot.name}: {information_slots[slot.name]}")
         return "Summary: " + " | ".join(summary_parts) if summary_parts else "Conversation completed."
+
+    def _is_slot_complete(self, slot: InformationSlot, value: Any) -> bool:
+        if value in (None, "", [], {}):
+            return False
+        if slot.extraction_model and isinstance(value, dict):
+            try:
+                # Pydantic v2: check required fields on the model
+                required_fields = [
+                    name for name, field in slot.extraction_model.model_fields.items() if field.is_required
+                ]
+                for field_name in required_fields:
+                    if value.get(field_name) in (None, "", [], {}):
+                        return False
+            except Exception:
+                # If introspection fails, fall back to non-empty check
+                return True
+        return True
+
+    def _missing_required_slots(self, state: AskuraState) -> List[InformationSlot]:
+        info = state.extracted_slots
+        missing: List[InformationSlot] = []
+        for slot in self.config.information_slots:
+            if slot.required and not self._is_slot_complete(slot, info.get(slot.name)):
+                missing.append(slot)
+        # Highest priority first (larger number means higher priority)
+        missing.sort(key=lambda s: s.priority, reverse=True)
+        return missing
+
+    def _ready_to_summarize(self, state: AskuraState) -> bool:
+        # Summarize only when all required slots are complete
+        return len(self._missing_required_slots(state)) == 0 and state.turns > 1
+
+    def _choose_next_slot_to_ask(self, state: AskuraState) -> Optional[str]:
+        missing = self._missing_required_slots(state)
+        if not missing:
+            return None
+        # Choose the highest priority missing slot whose dependencies are satisfied
+        info = state.extracted_slots
+        for slot in missing:
+            if not slot.dependencies:
+                return slot.name
+            if all(info.get(dep) for dep in slot.dependencies):
+                return slot.name
+        return missing[0].name

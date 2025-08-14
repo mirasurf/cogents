@@ -45,17 +45,8 @@ Intent Classification (focus ONLY on last message):
 - "smalltalk": Greetings, pleasantries, casual conversation
 - "task": Goal-oriented, information requests, specific questions, task content
 
-Context:
-- Purpose: {conversation_purpose}
-- On-track confidence: {conversation_on_track_confidence}
-- User style: {conversation_style}
-- User confidence: {user_confidence} 
-- Conversation flow: {conversation_flow}
-- Sentiment: {sentiment}
-- Momentum: {momentum}
-- Missing info: {missing_info}
-- Ready to summarize: {ready_to_summarize}
-
+Context: {conversation_context}
+Ready to summarize: {ready_to_summarize}
 Available actions: {available_actions}
 Recent messages: {recent_messages}
 
@@ -83,53 +74,9 @@ def get_conversation_analysis_prompt(analysis_type: str, **kwargs) -> str:
 
 # --- Question generation prompts -------------------------------------------------
 
-QUESTION_GENERATION_PROMPT = """Generate ONE specific, natural question to guide the user toward goals: {conversation_purposes}
-
-REQUIREMENTS:
-- Be conversational and match the user's style: {conversation_style}
-- Ask for highest-priority missing information: {missing_required_slots}
-- Build on what you know: {known_slots}
-- Avoid repeating questions already asked
-- Provide helpful context or examples when appropriate
-- Keep it concise and friendly
-
-Next action: {next_action}
-Output: Question only."""
-
-
-SMALLTALK_PIVOT_PROMPT = """Be friendly, warm, and naturally conversational. Briefly acknowledge the user's greeting/smalltalk, then smoothly pivot to the task with ONE engaging question that moves toward the conversation purposes.
-
-Requirements:
-- Respond warmly to the user's greeting/smalltalk first
-- Make the transition feel natural, not abrupt  
-- Ask a specific, engaging question related to the conversation purpose
-- Match the user's conversational tone
-- Keep it concise but personable
-
-Context:
-- Conversation purposes: {conversation_purposes}
-- Last user message: {last_user_message}
-
-Output: One friendly response with a natural pivot question."""
-
-
-def get_question_generation_prompt(**kwargs) -> str:
-    try:
-        return QUESTION_GENERATION_PROMPT.format(**kwargs)
-    except KeyError:
-        return QUESTION_GENERATION_PROMPT
-
-
-def get_smalltalk_pivot_prompt(**kwargs) -> str:
-    try:
-        return SMALLTALK_PIVOT_PROMPT.format(**kwargs)
-    except KeyError:
-        return SMALLTALK_PIVOT_PROMPT
-
-
-# --- Unified next-question prompt ----------------------------------------------
-
-UNIFIED_NEXT_QUESTION_PROMPT = """Generate ONE specific, helpful question to guide the user's thinking.
+# TODO (xmingc): I like the idea of letting the system hold a limited number of improvisations.
+NEXT_QUESTION_PROMPT = """You are a witty and creative travel planning assistant. Generate a short, precise, and inspiring question that incorporates relevant context naturally. Feel free to make slight improvisations - add wordplay, use creative language, make clever observations, or add a touch of humor when appropriate. The question should be conversational, memorable, and always encouraging.
+Keep it under 5 sentences but make it delightful and engaging. Return only the question, no additional text.
 
 REQUIREMENTS:
 - Ask ONE specific question that helps the user think about their plans
@@ -140,19 +87,11 @@ REQUIREMENTS:
 - When user shows interest but may lack knowledge, provide concrete options/suggestions
 
 Context: Intent={intent_type}, Action={next_action_label}, Missing={missing_required_slots}, Known={known_slots}
-Suggestions: {enriched_suggestions}
-
-Special handling: If enriched_suggestions exist, incorporate them as specific choices rather than open-ended questions.
 Output: Question only."""
 
 
-def get_unified_next_question_prompt(**kwargs) -> str:
+def get_next_question_prompt(**kwargs) -> str:
     try:
-        # Ensure enriched_suggestions is always present
-        if "enriched_suggestions" not in kwargs:
-            kwargs["enriched_suggestions"] = {}
-        return UNIFIED_NEXT_QUESTION_PROMPT.format(**kwargs)
-    except KeyError as e:
-        logger = __import__("logging").getLogger(__name__)
-        logger.warning(f"Missing prompt parameter: {e}")
-        return UNIFIED_NEXT_QUESTION_PROMPT
+        return NEXT_QUESTION_PROMPT.format(**kwargs)
+    except KeyError:
+        return NEXT_QUESTION_PROMPT

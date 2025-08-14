@@ -15,7 +15,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from langchain_core.messages import AIMessage, HumanMessage
 
 from cogents.agents.askura_agent.conversation_manager import ConversationManager
-from cogents.agents.askura_agent.schemas import AskuraConfig, AskuraState, ConversationContext
+from cogents.agents.askura_agent.models import AskuraConfig, AskuraState, ConversationContext
 
 
 def create_sample_conversation_state(purpose: str, messages: list) -> AskuraState:
@@ -24,7 +24,7 @@ def create_sample_conversation_state(purpose: str, messages: list) -> AskuraStat
         session_id="test_session",
         user_id="test_user",
         messages=messages,
-        extracted_information_slots={},
+        extracted_slots={},
         conversation_purposes=[purpose],
         metadata={},
     )
