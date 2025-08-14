@@ -20,7 +20,7 @@ from .schemas import (
     ConversationMomentum,
     ConversationSentiment,
     ConversationStyle,
-    NextActionResponse,
+    NextActionAnalysis,
     UserConfidence,
 )
 
@@ -59,10 +59,8 @@ class ConversationManager:
             if not self.llm or not isinstance(last_user_text, str):
                 raise ValueError("LLM client or last user text is not valid")
 
-            # Prepare recent messages for analysis
-            recent_messages_text = "\n".join(m.content for m in user_messages[-5:] if isinstance(m.content, str))[
-                -1200:
-            ]  # Limit to last 1200 chars
+            # Prepare recent messages for analysis - optimize for token efficiency
+            recent_messages_text = self._format_recent_messages(user_messages[-3:])  # Only last 3 messages
 
             # Get structured prompt for conversation analysis
             prompt = get_conversation_analysis_prompt(
@@ -110,7 +108,7 @@ class ConversationManager:
         context: ConversationContext,
         recent_messages: List[str],
         ready_to_summarize: bool = False,
-    ) -> NextActionResponse:
+    ) -> NextActionAnalysis:
         """
         Unified method to determine next action with intent classification.
 
@@ -125,7 +123,9 @@ class ConversationManager:
                 allowed.append("summarize")
             allowed.extend(["redirect_conversation", "reply_smalltalk"])
 
-            # Get structured prompt for unified next action determination
+            # Get structured prompt for unified next action determination - preserve readability
+            recent_messages_text = "\n".join([f"User: {msg}" for msg in recent_messages]) if recent_messages else ""
+
             prompt = get_conversation_analysis_prompt(
                 "determine_next_action",
                 conversation_purpose=context.conversation_purpose,
@@ -140,13 +140,13 @@ class ConversationManager:
                 missing_info=missing_info,
                 available_actions=allowed,
                 ready_to_summarize=ready_to_summarize,
-                recent_messages="\n".join(recent_messages[-3:]),  # Last 3 messages
+                recent_messages=recent_messages_text,  # Last 3 messages
             )
 
             # Use structured completion with retry for reliable unified analysis
-            result: NextActionResponse = self.llm.structured_completion(
+            result: NextActionAnalysis = self.llm.structured_completion(
                 messages=[{"role": "user", "content": prompt}],
-                response_model=NextActionResponse,
+                response_model=NextActionAnalysis,
                 temperature=0.3,
                 max_tokens=300,
             )
@@ -160,7 +160,7 @@ class ConversationManager:
             logger.warning(f"Unified next action determination failed: {e}, falling back to heuristics")
             # Fallback to heuristic approach
             next_action = self._get_heuristic_next_action(context, context.missing_info)
-            return NextActionResponse(
+            return NextActionAnalysis(
                 intent_type="task",
                 next_action=next_action or "summarize",
                 reasoning=f"Heuristic fallback - error: {str(e)}",
@@ -339,3 +339,23 @@ class ConversationManager:
             if any(word in slot.name.lower() for word in ["interest", "preference", "like", "favorite"]):
                 easy_questions.append(f"ask_{slot.name}")
         return easy_questions
+
+    def _format_recent_messages(self, messages: List[HumanMessage]) -> str:
+        """Format recent messages while preserving important context."""
+        if not messages:
+            return ""
+
+        # Preserve more context while still being efficient
+        formatted = []
+        for i, msg in enumerate(messages):
+            # Keep full short messages, smart truncation for long ones
+            if len(msg.content) <= 300:
+                content = msg.content
+            else:
+                # Keep beginning and end for context
+                content = msg.content[:200] + "..." + msg.content[-50:]
+
+            role_prefix = "User" if i == len(messages) - 1 else f"U{i+1}"  # Mark most recent
+            formatted.append(f"{role_prefix}: {content}")
+
+        return "\n".join(formatted)  # Use newlines for better readability

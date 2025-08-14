@@ -16,7 +16,7 @@ import logging
 import os
 import sys
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 try:
     import colorlog
@@ -101,3 +101,72 @@ def setup_logging(
 
 def get_logger(name: str) -> logging.Logger:
     return logging.getLogger(name)
+
+
+# --- Per-message color utilities -------------------------------------------------
+
+_ANSI_COLORS: Dict[str, str] = {
+    "black": "\033[30m",
+    "red": "\033[31m",
+    "green": "\033[32m",
+    "yellow": "\033[33m",
+    "blue": "\033[34m",
+    "magenta": "\033[35m",
+    "cyan": "\033[36m",
+    "white": "\033[37m",
+}
+
+_ANSI_ATTRS: Dict[str, str] = {
+    "bold": "\033[1m",
+    "dim": "\033[2m",
+    "underline": "\033[4m",
+    "blink": "\033[5m",
+    "reverse": "\033[7m",
+}
+
+_ANSI_RESET = "\033[0m"
+
+
+def color_text(message: str, color: Optional[str] = None, attrs: Optional[List[str]] = None) -> str:
+    """Wrap message with ANSI color/attribute codes.
+
+    Works regardless of whether colorlog is installed. Use to color a specific
+    log invocation, e.g. `logger.info(color_text("done", "cyan"))`.
+    """
+    if not color and not attrs:
+        return message
+
+    parts: List[str] = []
+    if attrs:
+        for attr in attrs:
+            code = _ANSI_ATTRS.get(attr.lower())
+            if code:
+                parts.append(code)
+    if color:
+        parts.append(_ANSI_COLORS.get(color.lower(), ""))
+
+    return f"{''.join(parts)}{message}{_ANSI_RESET}"
+
+
+def info_color(logger_obj: logging.Logger, message: str, color: Optional[str] = None, *, bold: bool = False) -> None:
+    """Log INFO with optional per-message color and bold attribute."""
+    attrs = ["bold"] if bold else None
+    logger_obj.info(color_text(message, color=color, attrs=attrs))
+
+
+def debug_color(logger_obj: logging.Logger, message: str, color: Optional[str] = None, *, bold: bool = False) -> None:
+    """Log DEBUG with optional per-message color and bold attribute."""
+    attrs = ["bold"] if bold else None
+    logger_obj.debug(color_text(message, color=color, attrs=attrs))
+
+
+def warning_color(logger_obj: logging.Logger, message: str, color: Optional[str] = None, *, bold: bool = False) -> None:
+    """Log WARNING with optional per-message color and bold attribute."""
+    attrs = ["bold"] if bold else None
+    logger_obj.warning(color_text(message, color=color, attrs=attrs))
+
+
+def error_color(logger_obj: logging.Logger, message: str, color: Optional[str] = None, *, bold: bool = False) -> None:
+    """Log ERROR with optional per-message color and bold attribute."""
+    attrs = ["bold"] if bold else None
+    logger_obj.error(color_text(message, color=color, attrs=attrs))

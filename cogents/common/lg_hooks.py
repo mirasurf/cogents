@@ -4,23 +4,29 @@ from typing import Dict, List, Optional
 
 from langchain_core.callbacks import BaseCallbackHandler
 
-from cogents.common.logging import get_logger
+from cogents.common.logging import color_text, get_logger
 
 logger = get_logger(__name__)
 
 
 class NodeLoggingCallback(BaseCallbackHandler):
-    def on_tool_end(self, output, run_id, parent_run_id, **kwargs):
-        logger.info(f"[TOOL END] output={output}")
+    def __init__(self, node_id: Optional[str] = None):
+        self.node_id = node_id
 
-    def on_chain_end(self, outputs, run_id, parent_run_id, **kwargs):
-        logger.info(f"[CHAIN END] outputs={outputs}")
+    def _prefix(self) -> str:
+        return f"[{self.node_id}] " if self.node_id else ""
+
+    def on_tool_end(self, output, run_id, parent_run_id, **kwargs):
+        logger.info(color_text(f"{self._prefix()}[TOOL END] output={output}", "cyan", ["dim"]))
+
+    def on_chain_end(self, output, run_id, parent_run_id, **kwargs):
+        logger.info(color_text(f"{self._prefix()}[CHAIN END] output={output}", "blue", ["dim"]))
 
     def on_llm_end(self, response, run_id, parent_run_id, **kwargs):
-        logger.info(f"[LLM END] response={response}")
+        logger.info(color_text(f"{self._prefix()}[LLM END] response={response}", "magenta", ["dim"]))
 
     def on_custom_event(self, event_name, payload, **kwargs):
-        logger.info(f"[EVENT] {event_name}: {payload}")
+        logger.info(color_text(f"{self._prefix()}[EVENT] {event_name}: {payload}", "yellow", ["dim"]))
 
 
 class TokenUsageCallback(BaseCallbackHandler):
@@ -33,21 +39,11 @@ class TokenUsageCallback(BaseCallbackHandler):
         self.llm_calls = 0
         self.token_usage_history: List[Dict] = []
 
-        # Common model pricing (per 1K tokens) - can be overridden
-        self.model_pricing = {
-            "gpt-4": {"input": 0.03, "output": 0.06},
-            "gpt-4-turbo": {"input": 0.01, "output": 0.03},
-            "gpt-3.5-turbo": {"input": 0.0015, "output": 0.002},
-            "claude-3-opus": {"input": 0.015, "output": 0.075},
-            "claude-3-sonnet": {"input": 0.003, "output": 0.015},
-            "claude-3-haiku": {"input": 0.00025, "output": 0.00125},
-        }
-
     def on_llm_start(self, serialized: Dict, prompts: List[str], **kwargs):
         """Track when LLM calls start"""
         self.llm_calls += 1
         if self.verbose:
-            logger.info(f"[TOKEN CALLBACK] LLM call #{self.llm_calls} started")
+            logger.info(color_text(f"[TOKEN CALLBACK] LLM call #{self.llm_calls} started", "cyan", ["dim"]))
 
     def on_llm_end(self, response, run_id: Optional[str] = None, **kwargs):
         """Enhanced token usage tracking with multiple extraction methods"""
@@ -105,30 +101,18 @@ class TokenUsageCallback(BaseCallbackHandler):
         run_info = f" (run_id: {run_id})" if run_id else ""
         model_info = f" [{self.model_name}]" if self.model_name else ""
 
-        logger.info(f"[TOKEN USAGE]{model_info}{run_info}")
-        logger.info(f"  Prompt: {prompt_tokens:,} tokens")
-        logger.info(f"  Completion: {completion_tokens:,} tokens")
-        logger.info(f"  Total: {total_tokens:,} tokens")
+        logger.info(color_text(f"[TOKEN USAGE]{model_info}{run_info}", "magenta", ["dim"]))
+        logger.info(color_text(f"  Prompt: {prompt_tokens:,} tokens", None, ["dim"]))
+        logger.info(color_text(f"  Completion: {completion_tokens:,} tokens", None, ["dim"]))
+        logger.info(color_text(f"  Total: {total_tokens:,} tokens", None, ["dim"]))
 
         # Show session totals
         session_total = self.total_tokens()
-        logger.info(f"  Session Total: {session_total:,} tokens")
+        logger.info(color_text(f"  Session Total: {session_total:,} tokens", None, ["dim"]))
 
-        # Show cost estimation if model is known
-        if self.model_name and self.model_name in self.model_pricing:
-            cost = self._estimate_cost(prompt_tokens, completion_tokens)
-            logger.info(f"  Estimated Cost: ${cost:.4f}")
+        # Cost estimation removed
 
-    def _estimate_cost(self, prompt_tokens: int, completion_tokens: int) -> float:
-        """Estimate cost based on model pricing"""
-        if not self.model_name or self.model_name not in self.model_pricing:
-            return 0.0
-
-        pricing = self.model_pricing[self.model_name]
-        prompt_cost = (prompt_tokens / 1000) * pricing["input"]
-        completion_cost = (completion_tokens / 1000) * pricing["output"]
-
-        return prompt_cost + completion_cost
+    # Cost estimation methods removed
 
     def total_tokens(self) -> int:
         """Get total tokens used in this session"""
@@ -145,7 +129,6 @@ class TokenUsageCallback(BaseCallbackHandler):
             "total_completion_tokens": self.total_completion_tokens,
             "total_tokens": self.total_tokens(),
             "model_name": self.model_name,
-            "estimated_cost": self._estimate_cost(self.total_prompt_tokens, self.total_completion_tokens),
             "token_usage_history": self.token_usage_history,
         }
 
@@ -153,20 +136,19 @@ class TokenUsageCallback(BaseCallbackHandler):
         """Print a formatted session summary"""
         summary = self.get_session_summary()
 
-        logger.info("\n" + "=" * 50)
-        logger.info("TOKEN USAGE SESSION SUMMARY")
-        logger.info("=" * 50)
-        logger.info(f"Session Duration: {summary['session_duration_seconds']:.2f} seconds")
-        logger.info(f"LLM Calls: {summary['llm_calls']}")
-        logger.info(f"Total Prompt Tokens: {summary['total_prompt_tokens']:,}")
-        logger.info(f"Total Completion Tokens: {summary['total_completion_tokens']:,}")
-        logger.info(f"Total Tokens: {summary['total_tokens']:,}")
+        logger.info(color_text("\n" + "=" * 50, "blue", ["dim"]))
+        logger.info(color_text("TOKEN USAGE SESSION SUMMARY", "blue", ["dim"]))
+        logger.info(color_text("=" * 50, "blue", ["dim"]))
+        logger.info(color_text(f"Session Duration: {summary['session_duration_seconds']:.2f} seconds", None, ["dim"]))
+        logger.info(color_text(f"LLM Calls: {summary['llm_calls']}", None, ["dim"]))
+        logger.info(color_text(f"Total Prompt Tokens: {summary['total_prompt_tokens']:,}", None, ["dim"]))
+        logger.info(color_text(f"Total Completion Tokens: {summary['total_completion_tokens']:,}", None, ["dim"]))
+        logger.info(color_text(f"Total Tokens: {summary['total_tokens']:,}", None, ["dim"]))
 
         if self.model_name:
-            logger.info(f"Model: {self.model_name}")
-            logger.info(f"Estimated Cost: ${summary['estimated_cost']:.4f}")
+            logger.info(color_text(f"Model: {self.model_name}", None, ["dim"]))
 
-        logger.info("=" * 50)
+        logger.info(color_text("=" * 50, "blue", ["dim"]))
 
     def reset_session(self):
         """Reset all counters for a new session"""
@@ -176,12 +158,6 @@ class TokenUsageCallback(BaseCallbackHandler):
         self.llm_calls = 0
         self.token_usage_history = []
         if self.verbose:
-            logger.info("[TOKEN CALLBACK] Session reset")
+            logger.info(color_text("[TOKEN CALLBACK] Session reset", "cyan", ["dim"]))
 
-    def set_model_pricing(self, model_name: str, input_price: float, output_price: float):
-        """Set custom pricing for a model"""
-        self.model_pricing[model_name] = {"input": input_price, "output": output_price}
-        if self.verbose:
-            logger.info(
-                f"[TOKEN CALLBACK] Set pricing for {model_name}: ${input_price}/1K input, ${output_price}/1K output"
-            )
+    # Pricing configuration removed

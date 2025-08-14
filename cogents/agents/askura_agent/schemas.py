@@ -87,7 +87,7 @@ class InformationSlot(BaseModel):
         return self.model_dump_json()
 
 
-class NextActionResponse(BaseModel):
+class NextActionAnalysis(BaseModel):
     """Response for intent classification and next action determination."""
 
     next_action: str = Field(description="The selected next action from available options")
@@ -120,12 +120,12 @@ class ConversationContext(BaseModel):
         use_enum_values = True
 
     def __str__(self) -> str:
-        """Return JSON string representation for f-string compatibility."""
-        return self.model_dump_json()
+        """Return concise string representation for f-string compatibility."""
+        return f"ConversationContext(confidence={self.conversation_on_track_confidence:.1f}, style={self.conversation_style})"
 
     def __repr__(self) -> str:
-        """Return JSON string representation for debugging."""
-        return self.model_dump_json()
+        """Return concise representation for debugging."""
+        return f"ConversationContext(confidence={self.conversation_on_track_confidence:.1f}, style={self.conversation_style}, missing={len(self.missing_info)})"
 
 
 class AskuraState(BaseModel):
@@ -153,7 +153,7 @@ class AskuraState(BaseModel):
     pending_extraction: bool = Field(default=False)
 
     # Next action analysis results
-    next_action_response: Optional[NextActionResponse] = Field(default=None)
+    next_action_ayalysis: Optional[NextActionAnalysis] = Field(default=None)
 
     # Custom fields (for specific agents)
     custom_data: Dict[str, Any] = Field(default_factory=dict)
@@ -164,12 +164,12 @@ class AskuraState(BaseModel):
         use_enum_values = True
 
     def __str__(self) -> str:
-        """Return JSON string representation for f-string compatibility."""
-        return self.model_dump_json()
+        """Return concise string representation for f-string compatibility."""
+        return f"AskuraState(session={self.session_id[:8]}, turns={self.turns}, complete={self.is_complete})"
 
     def __repr__(self) -> str:
-        """Return JSON string representation for debugging."""
-        return self.model_dump_json()
+        """Return concise representation for debugging."""
+        return f"AskuraState(user={self.user_id}, session={self.session_id[:8]}, turns={self.turns}, slots={len(self.extracted_information_slots)})"
 
     def __getitem__(self, key: str) -> Any:
         """Allow dictionary-like access to model fields."""
