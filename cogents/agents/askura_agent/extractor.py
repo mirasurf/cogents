@@ -36,8 +36,8 @@ class InformationExtractor:
 
         # Get current partial extraction state for context
         current_extractions = {}
-        if current_state and current_state.extracted_slots:
-            current_extractions = current_state.extracted_slots.copy()
+        if current_state and current_state.extracted_info:
+            current_extractions = current_state.extracted_info.copy()
 
         for slot in self.config.information_slots:
             if not slot.extraction_tools:
@@ -49,22 +49,21 @@ class InformationExtractor:
             except Exception as e:
                 logger.warning(f"Failed to extract {slot.name}: {e}")
 
-        return extracted_info
+        return self._merge_extracted_info(current_state, extracted_info)
 
-    def update_state_with_extracted_info(self, state: AskuraState, extracted_info: Dict[str, Any]) -> AskuraState:
+    def _merge_extracted_info(self, state: AskuraState, extracted_info: Dict[str, Any]) -> Dict[str, Any]:
         """Update state with extracted information, handling conflicts and merging data."""
-        info_slots = state.extracted_slots
+        merged = state.extracted_info
         for slot_name, extracted_value in extracted_info.items():
-            if not info_slots.get(slot_name):
+            if not merged.get(slot_name):
                 # Simple assignment for new values
-                info_slots[slot_name] = extracted_value
+                merged[slot_name] = extracted_value
                 logger.info(f"Extracted slot {slot_name}: {extracted_value}")
             else:
                 # Merge existing values for certain types
-                info_slots[slot_name] = self._merge_values(info_slots[slot_name], extracted_value, slot_name)
-                logger.info(f"Updated slot {slot_name}: {info_slots[slot_name]}")
-        state.extracted_slots = info_slots
-        return state
+                merged[slot_name] = self._merge_values(merged[slot_name], extracted_value, slot_name)
+                logger.info(f"Updated slot {slot_name}: {merged[slot_name]}")
+        return merged
 
     def _extract_slot_information_with_tools(
         self, user_message: str, slot: InformationSlot, current_extractions: Dict[str, Any]

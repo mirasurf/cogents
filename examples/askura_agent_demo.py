@@ -24,7 +24,7 @@ def create_travel_planning_config() -> AskuraConfig:
     information_slots = [
         InformationSlot(
             name="trip_plan_context",
-            description="Detailed travel plan, such as destination, dates, budget, interests, group size, etc.",
+            description="Detailed travel plan, required fields: destination, dates, interests. Optional fields: budgets, group size, transportation and more",
             priority=5,
             required=True,
             extraction_tools=["extract_trip_plan_context_simple"],
@@ -33,7 +33,7 @@ def create_travel_planning_config() -> AskuraConfig:
     ]
     return AskuraConfig(
         information_slots=information_slots,
-        conversation_purposes=["collect user information about the next planned trip"],
+        conversation_purpose=["collect user information about the next planned trip"],
     )
 
 
@@ -91,12 +91,15 @@ def interactive_loop() -> None:
             print(f"\n✅ Conversation completed. Confidence: {response.confidence:.2f}")
             break
 
-    # Optionally print a compact summary of gathered info
+    # Print a compact summary of gathered info
     slots = response.metadata.get("information_slots", {}) if response.metadata else {}
     if slots:
         print("\nCollected information:")
         for slot_name, value in slots.items():
             print(f"- {slot_name}: {value}")
+
+    # Show token usage statistics
+    agent.print_token_usage_summary()
 
 
 def main() -> None:

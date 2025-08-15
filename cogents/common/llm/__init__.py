@@ -4,6 +4,7 @@ from .base import BaseLLMClient
 from .ollama import LLMClient as OllamaLLMClient
 from .openai import LLMClient as OpenAILLMClient
 from .openrouter import LLMClient as OpenRouterLLMClient
+from .token_tracker import TokenUsage, TokenUsageTracker, get_token_tracker, record_token_usage
 
 __all__ = [
     "BaseLLMClient",
@@ -12,6 +13,10 @@ __all__ = [
     "OpenAILLMClient",
     "get_llm_client",
     "get_llm_client_instructor",
+    "get_token_tracker",
+    "record_token_usage",
+    "TokenUsage",
+    "TokenUsageTracker",
 ]
 
 #############################

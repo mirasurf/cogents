@@ -9,6 +9,7 @@ from langchain_core.messages import BaseMessage
 from pydantic import BaseModel, Field
 
 from cogents.common.consts import GEMINI_FLASH
+from cogents.common.utils import get_enum_value
 
 
 class ConversationStyle(str, Enum):
@@ -70,6 +71,28 @@ class NextActionPlan(BaseModel):
     confidence: float = Field(default=0.0, description="Confidence score (0.0-1.0) in the action choice")
 
 
+class KnowledgeGapAnalysis(BaseModel):
+    """Analysis of knowledge gaps and next topics to explore."""
+
+    knowledge_gap_summary: str = Field(description="Overall summary of what's missing compared to conversation purpose")
+    critical_missing_info: List[str] = Field(
+        description="Most important information still needed", default_factory=list
+    )
+    suggested_next_topics: List[str] = Field(description="3-5 specific topics to explore next", default_factory=list)
+    readiness_to_proceed: float = Field(
+        description="Confidence (0.0-1.0) that we can proceed with current information", default=0.0
+    )
+    reasoning: str = Field(description="Analysis reasoning and recommendations")
+
+
+class MessageRoutingDecision(BaseModel):
+    """LLM-based routing decision for new messages."""
+
+    routing_destination: str = Field(description="Where to route: 'start_deep_thinking' or 'response_generator'")
+    reasoning: str = Field(description="Brief explanation of the routing decision")
+    confidence: float = Field(default=0.0, description="Confidence score (0.0-1.0) in the routing decision")
+
+
 class InformationSlot(BaseModel):
     """Configuration for an information slot to be collected."""
 
@@ -97,17 +120,13 @@ class ConversationContext(BaseModel):
     conversation_on_track_confidence: float = Field(default=0.0)
 
     # Conversation vibe
-    conversation_style: ConversationStyle = Field(default=ConversationStyle.DIRECT)
     information_density: float = Field(default=0.0)
+    conversation_style: ConversationStyle = Field(default=ConversationStyle.DIRECT)
     conversation_depth: ConversationDepth = Field(default=ConversationDepth.SURFACE)
     user_confidence: UserConfidence = Field(default=UserConfidence.MEDIUM)
     conversation_flow: ConversationFlow = Field(default=ConversationFlow.NATURAL)
     conversation_momentum: ConversationMomentum = Field(default=ConversationMomentum.POSITIVE)
     last_message_sentiment: ConversationSentiment = Field(default=ConversationSentiment.NEUTRAL)
-
-    # Complementary information
-    missing_info: List[str] = Field(default_factory=list)
-    suggested_next_topics: List[str] = Field(default_factory=list)
 
     class Config:
         """Pydantic configuration."""
@@ -119,34 +138,47 @@ class ConversationContext(BaseModel):
         return {
             "conversation_purpose": self.conversation_purpose,
             "conversation_on_track_confidence": self.conversation_on_track_confidence,
-            "conversation_style": self.conversation_style.value,
             "information_density": self.information_density,
-            "conversation_depth": self.conversation_depth.value,
-            "user_confidence": self.user_confidence.value,
-            "conversation_flow": self.conversation_flow.value,
-            "sentiment": self.last_message_sentiment.value,
-            "momentum": self.conversation_momentum.value,
-            "missing_info": self.missing_info,
-            "suggested_next_topics": self.suggested_next_topics,
+            "conversation_style": get_enum_value(self.conversation_style),
+            "conversation_depth": get_enum_value(self.conversation_depth),
+            "user_confidence": get_enum_value(self.user_confidence),
+            "conversation_flow": get_enum_value(self.conversation_flow),
+            "conversation_momentum": get_enum_value(self.conversation_momentum),
+            "last_message_sentiment": get_enum_value(self.last_message_sentiment),
         }
+
+
+def keep_first(left: str, right: str) -> str:
+    return left if left else right
 
 
 class AskuraState(BaseModel):
     """Core state for AskuraAgent conversations."""
 
     # Metadata
-    user_id: str
-    session_id: str
+    user_id: str = Field(default="")
+    session_id: str = Field(default="")
     turns: int = Field(default=0)
     created_at: str = Field(default="")
     updated_at: str = Field(default="")
 
     # Conversation state
     messages: Sequence[BaseMessage] = Field(default_factory=list)
-    chat_context: ConversationContext = Field(default_factory=ConversationContext)
+    conversation_context: ConversationContext = Field(default_factory=ConversationContext)
 
     # Information slots (dynamic based on configuration)
-    extracted_slots: Union[str, Dict[str, str]] = Field(default_factory=dict)
+    extracted_info: Dict[str, Any] = Field(default_factory=dict)
+    missing_info: Dict[str, str] = Field(
+        default_factory=dict, description="Information slot name -> description of what's missing"
+    )
+    knowledge_gap: str = Field(
+        default="", description="Summary of knowledge gap between conversation purpose and current status"
+    )
+    suggested_next_topics: List[str] = Field(default_factory=list)
+
+    # Memory state
+    memory: Dict[str, Any] = Field(default_factory=dict)
+
     # Next action analysis results
     next_action_plan: Optional[NextActionPlan] = Field(default=None)
 
@@ -173,11 +205,9 @@ class AskuraConfig(BaseModel):
     temperature: float = 0.7
     max_tokens: int = 1000
 
-    # Conversation limits
-    max_conversation_turns: int = 10
-
     # Purposes of the conversation
-    conversation_purposes: List[str] = Field(default_factory=list)
+    conversation_purpose: Union[List[str], str] = Field(default="")
+    max_conversation_turns: int = 15
 
     # Information slots configuration
     information_slots: List[InformationSlot] = Field(default_factory=list)
