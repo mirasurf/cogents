@@ -1,6 +1,7 @@
 from typing import Optional
 
 from .base import BaseLLMClient
+from .llamacpp import LLMClient as LlamaCppLLMClient
 from .ollama import LLMClient as OllamaLLMClient
 from .openai import LLMClient as OpenAILLMClient
 from .openrouter import LLMClient as OpenRouterLLMClient
@@ -8,6 +9,7 @@ from .token_tracker import TokenUsage, TokenUsageTracker, get_token_tracker, rec
 
 __all__ = [
     "BaseLLMClient",
+    "LlamaCppLLMClient",
     "OpenRouterLLMClient",
     "OllamaLLMClient",
     "OpenAILLMClient",
@@ -37,7 +39,7 @@ def get_llm_client(
     Get an LLM client instance based on the specified provider.
 
     Args:
-        provider: LLM provider to use ("openrouter", "openai", "ollama")
+        provider: LLM provider to use ("openrouter", "openai", "ollama", "llamacpp")
         base_url: Base URL for API (used by openai provider)
         api_key: API key for authentication (used by openai and openrouter providers)
         instructor: Whether to enable instructor for structured output

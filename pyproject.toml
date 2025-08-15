@@ -36,6 +36,8 @@ langchain-core = "^0.3.72"
 langchain-text-splitters = "^0.3.0"
 langchain-tavily = "^0.2.11"
 langchain-ollama = "^0.2.0"
+# Local LLM support
+llama-cpp-python = "^0.2.87"
 # LangGraph for workflow orchestration
 langgraph = "^0.5.4"
 # LangSmith for observability
