@@ -1,5 +1,8 @@
 # Cogents
 
+[![ci](https://github.com/caesar0301/cogents/actions/workflows/ci.yml/badge.svg)](https://github.com/caesar0301/cogents/actions/workflows/ci.yml)
+[![PyPI version](https://img.shields.io/pypi/v/cogents.svg)](https://pypi.org/project/cogents/)
+
 A collection of essential, high-quality building blocks for constructing sophisticated multi-agent systems (MAS), with a primary focus on LangGraph. Not a full agentic framework, but a lightweight repository of key components to help bridge the last mile in MAS development.
 
 For the underlying philosophy, refer to my this talk on MAS ([link](https://github.com/caesar0301/mas-talk-2508/blob/master/mas-talk-xmingc.pdf)).
