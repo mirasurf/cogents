@@ -80,8 +80,17 @@ def get_llm_client(
             vision_model=vision_model,
             **kwargs,
         )
+    elif provider == "llamacpp":
+        return LlamaCppLLMClient(
+            base_url=base_url,
+            api_key=api_key,
+            instructor=instructor,
+            chat_model=chat_model,
+            vision_model=vision_model,
+            **kwargs,
+        )
     else:
-        raise ValueError(f"Unsupported provider: {provider}. Supported providers: openrouter, openai, ollama")
+        raise ValueError(f"Unsupported provider: {provider}. Supported providers: openrouter, openai, ollama, llamacpp")
 
 
 def get_llm_client_instructor(
@@ -96,7 +105,7 @@ def get_llm_client_instructor(
     Get an LLM client instance with instructor support based on the specified provider.
 
     Args:
-        provider: LLM provider to use ("openrouter", "openai", "ollama")
+        provider: LLM provider to use ("openrouter", "openai", "ollama", "llamacpp")
         base_url: Base URL for API (used by openai provider)
         api_key: API key for authentication (used by openai and openrouter providers)
         chat_model: Model to use for chat completions
