@@ -1,13 +1,12 @@
-import base64
 import json
 import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Type, TypeVar, Union
 
+from huggingface_hub import snapshot_download
 from llama_cpp import Llama
-from pydantic import BaseModel
 
-from cogents.common.langsmith import configure_langsmith, is_langsmith_enabled
+from cogents.common.langsmith import configure_langsmith
 from cogents.common.llm.base import BaseLLMClient
 from cogents.common.llm.token_tracker import estimate_token_usage, get_token_tracker
 from cogents.common.logging import get_logger
@@ -16,9 +15,54 @@ T = TypeVar("T")
 
 logger = get_logger(__name__)
 
+# Default model configuration
+DEFAULT_MODEL_REPO = "ggml-org/gemma-3-270m-it-GGUF"
+DEFAULT_MODEL_FILENAME = "gemma-3-270m-it-Q8_0.gguf"
+
+
+def _download_default_model() -> str:
+    """
+    Download the default model from Hugging Face Hub if not already cached.
+
+    Returns:
+        Path to the downloaded model file
+    """
+    try:
+        logger.info(f"No model path provided, downloading default model: {DEFAULT_MODEL_REPO}")
+
+        # Download the model repository to local cache
+        local_dir = snapshot_download(DEFAULT_MODEL_REPO)
+
+        # Construct path to the specific model file
+        model_path = os.path.join(local_dir, DEFAULT_MODEL_FILENAME)
+
+        if not os.path.exists(model_path):
+            # If the expected file doesn't exist, try to find any .gguf file
+            gguf_files = [f for f in os.listdir(local_dir) if f.endswith(".gguf")]
+            if gguf_files:
+                model_path = os.path.join(local_dir, gguf_files[0])
+                logger.info(f"Using found model file: {gguf_files[0]}")
+            else:
+                raise FileNotFoundError(f"No .gguf files found in downloaded model directory: {local_dir}")
+
+        logger.info(f"Model downloaded successfully to: {model_path}")
+        return model_path
+
+    except Exception as e:
+        logger.error(f"Failed to download default model: {e}")
+        raise ValueError(
+            f"Failed to download default model {DEFAULT_MODEL_REPO}. "
+            "Please provide a model_path parameter or set LLAMACPP_MODEL_PATH environment variable."
+        ) from e
+
 
 class LLMClient(BaseLLMClient):
-    """Client for interacting with local LLMs using llama-cpp-python."""
+    """
+    Client for interacting with local LLMs using llama-cpp-python.
+
+    Automatically downloads a default model (ggml-org/gemma-3-270m-it-GGUF) from
+    Hugging Face Hub if no model path is provided via parameter or environment variable.
+    """
 
     def __init__(
         self,
@@ -34,7 +78,9 @@ class LLMClient(BaseLLMClient):
         Initialize the LLM client.
 
         Args:
-            model_path: Path to the GGUF model file
+            model_path: Path to the GGUF model file. If not provided and LLAMACPP_MODEL_PATH
+                       environment variable is not set, automatically downloads the default model
+                       (ggml-org/gemma-3-270m-it-GGUF) from Hugging Face Hub.
             instructor: Whether to enable instructor for structured output
             chat_model: Model name (used for logging, defaults to model filename)
             vision_model: Vision model name (llamacpp doesn't support vision yet)
@@ -46,12 +92,11 @@ class LLMClient(BaseLLMClient):
         configure_langsmith()
         self._langsmith_provider = "llamacpp"
 
-        # Get model path from parameter or environment
+        # Get model path from parameter or environment, or download default model
         self.model_path = model_path or os.getenv("LLAMACPP_MODEL_PATH")
         if not self.model_path:
-            raise ValueError(
-                "Model path is required. Provide model_path parameter or set LLAMACPP_MODEL_PATH environment variable."
-            )
+            logger.info("No model path provided, attempting to download default model...")
+            self.model_path = _download_default_model()
 
         if not os.path.exists(self.model_path):
             raise FileNotFoundError(f"Model file not found: {self.model_path}")
@@ -81,7 +126,7 @@ class LLMClient(BaseLLMClient):
 
         logger.info(f"Initialized LlamaCpp client with model: {self.model_path}")
 
-    def chat_completion(
+    def completion(
         self,
         messages: List[Dict[str, str]],
         temperature: float = 0.7,
@@ -179,7 +224,7 @@ class LLMClient(BaseLLMClient):
         for i in range(attempts):
             try:
                 # Get raw text response
-                raw_response = self.chat_completion(
+                raw_response = self.completion(
                     modified_messages, temperature=temperature, max_tokens=max_tokens, **kwargs
                 )
 

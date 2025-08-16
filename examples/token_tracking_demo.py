@@ -44,7 +44,7 @@ def demo_basic_token_tracking():
     # Test regular chat completion
     print("\n🤖 Testing regular chat completion...")
     messages = [{"role": "user", "content": "Say 'Hello World' in exactly 2 words."}]
-    response = client.chat_completion(messages, temperature=0.1, max_tokens=10)
+    response = client.completion(messages, temperature=0.1, max_tokens=10)
 
     print(f"Response: {response}")
     print(f"📊 Tokens after chat: {tracker.get_total_tokens()}")

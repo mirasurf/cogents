@@ -5,9 +5,7 @@ AskuraAgent provides a flexible, configurable framework for human-in-the-loop
 conversations that adapt to different user communication styles and dynamically
 collect required information through natural conversation flow.
 """
-import os
 import uuid
-from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from langchain_core.messages import AIMessage, HumanMessage
@@ -18,8 +16,6 @@ from langgraph.graph.message import add_messages
 
 from cogents.base.base import BaseConversationAgent
 from cogents.common.lg_hooks import NodeLoggingCallback, TokenUsageCallback
-from cogents.common.llm import get_llm_client_instructor
-from cogents.common.llm.token_tracker import get_token_tracker
 from cogents.common.logging import get_logger
 
 from .conversation import ConversationManager
@@ -46,7 +42,7 @@ class AskuraAgent(BaseConversationAgent):
         """Initialize the AskuraAgent."""
         # Initialize base class with LLM configuration
         super().__init__(llm_provider=config.llm_api_provider, model_name=config.model_name)
-        
+
         self.config = config
         self.extraction_tools = extraction_tools or {}
         self.checkpointer = InMemorySaver()
@@ -74,7 +70,7 @@ class AskuraAgent(BaseConversationAgent):
         """Run the agent with a user message and context. Required by BaseAgent."""
         # Create a temporary user ID for standalone run
         user_id = "standalone_user"
-        
+
         # Start a new conversation
         response = self.start_conversation(user_id, user_message)
         return response.message

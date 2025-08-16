@@ -45,7 +45,12 @@ class SeekraAgent(BaseResearcher):
     - format_final_answer(): Customize final answer formatting
     """
 
-    def __init__(self, configuration: Optional[Configuration] = None, llm_provider: str = "openrouter", model_name: Optional[str] = None):
+    def __init__(
+        self,
+        configuration: Optional[Configuration] = None,
+        llm_provider: str = "openrouter",
+        model_name: Optional[str] = None,
+    ):
         """
         Initialize the SeekraAgent.
         Requires OPENROUTER_API_KEY, GEMINI_API_KEY, and instructor library.
@@ -60,7 +65,7 @@ class SeekraAgent(BaseResearcher):
         """
         # Initialize base class
         super().__init__(llm_provider=llm_provider, model_name=model_name)
-        
+
         # Ensure LangSmith is configured for observability
         configure_langsmith()
 
@@ -325,7 +330,7 @@ class SeekraAgent(BaseResearcher):
                 4. Maintains factual accuracy based on the provided content
                 """
 
-                search_summary = self.llm_client.chat_completion(
+                search_summary = self.llm_client.completion(
                     messages=[{"role": "user", "content": summary_prompt}],
                     temperature=runnable_config.web_search_temperature,
                     max_tokens=runnable_config.web_search_max_tokens,
@@ -456,7 +461,7 @@ class SeekraAgent(BaseResearcher):
         )
 
         # Generate final answer using LLM
-        final_answer = self.llm_client.chat_completion(
+        final_answer = self.llm_client.completion(
             messages=[{"role": "user", "content": formatted_prompt}],
             temperature=runnable_config.answer_temperature,
             max_tokens=runnable_config.answer_max_tokens,

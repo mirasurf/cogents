@@ -17,7 +17,7 @@ class BaseLLMClient(ABC):
         """
 
     @abstractmethod
-    def chat_completion(
+    def completion(
         self,
         messages: List[Dict[str, str]],
         temperature: float = 0.7,
@@ -38,29 +38,6 @@ class BaseLLMClient(ABC):
         Returns:
             Generated text response or streaming response
         """
-
-    def completion(
-        self,
-        messages: List[Dict[str, str]],
-        temperature: float = 0.7,
-        max_tokens: Optional[int] = None,
-        stream: bool = False,
-        **kwargs,
-    ) -> Union[str, Dict[str, Any]]:
-        """
-        Generate completion using the configured model (alias for chat_completion).
-
-        Args:
-            messages: List of message dictionaries with 'role' and 'content' keys
-            temperature: Sampling temperature (0.0 to 2.0)
-            max_tokens: Maximum tokens to generate
-            stream: Whether to stream the response
-            **kwargs: Additional arguments to pass to the model
-
-        Returns:
-            Generated text response or streaming response
-        """
-        return self.chat_completion(messages, temperature, max_tokens, stream, **kwargs)
 
     @abstractmethod
     def structured_completion(

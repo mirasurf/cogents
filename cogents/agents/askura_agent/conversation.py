@@ -109,7 +109,7 @@ class ConversationManager:
             else "Building rapport and guiding conversation naturally toward the purpose",
             known_slots=str(state.extracted_info) if state.extracted_info else "Nothing specific collected yet",
         )
-        utterance = self.llm.chat_completion(
+        utterance = self.llm.completion(
             messages=[{"role": "system", "content": prompt}],
             temperature=0.7,
             max_tokens=200,

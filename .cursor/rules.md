@@ -76,11 +76,6 @@ client = get_llm_client(
 )
 
 # Basic chat
-response = client.chat_completion([
-    {"role": "user", "content": "Hello!"}
-])
-
-# Alternative: using completion alias
 response = client.completion([
     {"role": "user", "content": "Hello!"}
 ])
