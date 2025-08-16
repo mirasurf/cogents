@@ -23,8 +23,6 @@ class LLMClient(BaseLLMClient):
     def __init__(
         self,
         model_path: Optional[str] = None,
-        base_url: Optional[str] = None,
-        api_key: Optional[str] = None,
         instructor: bool = False,
         chat_model: Optional[str] = None,
         vision_model: Optional[str] = None,
@@ -37,8 +35,6 @@ class LLMClient(BaseLLMClient):
 
         Args:
             model_path: Path to the GGUF model file
-            base_url: Not used for llamacpp (kept for compatibility)
-            api_key: Not used for llamacpp (kept for compatibility)
             instructor: Whether to enable instructor for structured output
             chat_model: Model name (used for logging, defaults to model filename)
             vision_model: Vision model name (llamacpp doesn't support vision yet)

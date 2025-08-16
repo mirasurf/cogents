@@ -40,12 +40,14 @@ def get_llm_client(
 
     Args:
         provider: LLM provider to use ("openrouter", "openai", "ollama", "llamacpp")
-        base_url: Base URL for API (used by openai provider)
+        base_url: Base URL for API (used by openai and ollama providers)
         api_key: API key for authentication (used by openai and openrouter providers)
         instructor: Whether to enable instructor for structured output
         chat_model: Model to use for chat completions
         vision_model: Model to use for vision tasks
-        **kwargs: Additional provider-specific arguments
+        **kwargs: Additional provider-specific arguments:
+            - llamacpp: model_path, n_ctx, n_gpu_layers, etc.
+            - others: depends on provider
 
     Returns:
         LLMClient instance for the specified provider
@@ -82,8 +84,6 @@ def get_llm_client(
         )
     elif provider == "llamacpp":
         return LlamaCppLLMClient(
-            base_url=base_url,
-            api_key=api_key,
             instructor=instructor,
             chat_model=chat_model,
             vision_model=vision_model,
@@ -106,11 +106,13 @@ def get_llm_client_instructor(
 
     Args:
         provider: LLM provider to use ("openrouter", "openai", "ollama", "llamacpp")
-        base_url: Base URL for API (used by openai provider)
+        base_url: Base URL for API (used by openai and ollama providers)
         api_key: API key for authentication (used by openai and openrouter providers)
         chat_model: Model to use for chat completions
         vision_model: Model to use for vision tasks
-        **kwargs: Additional provider-specific arguments
+        **kwargs: Additional provider-specific arguments:
+            - llamacpp: model_path, n_ctx, n_gpu_layers, etc.
+            - others: depends on provider
 
     Returns:
         LLMClient instance with instructor enabled for the specified provider
