@@ -18,7 +18,20 @@ Supported providers in `cogents.common.llm`:
 - `ollama` - Local Ollama instances  
 - `llamacpp` - Local inference with llama-cpp-python (requires LLAMACPP_MODEL_PATH)
 
-## Python Command Execution
+## Development Workflow
+
+### After Each Implementation
+1. **Run unit tests**: `make test-unit` to ensure tests pass
+2. **Format code**: `make format` to apply consistent formatting
+3. **Check quality**: `make quality` for comprehensive code quality checks
+
+### Quick Development Checks
+- `make dev-check` - Quality + unit tests (fast feedback)
+- `make full-check` - All checks + tests + build (comprehensive)
+- `make ci-test` - CI test suite
+- `make ci-quality` - CI quality checks
+
+### Python Command Execution
 
 - **Always use `poetry run` for Python commands in development**
   - Use `poetry run python script.py` instead of `python script.py`
@@ -87,9 +100,20 @@ For llamacpp provider, you can set:
 
 - Integration tests are in `tests/integration/`
 - Unit tests are in `tests/unit/`
-- Use `poetry run pytest tests/` to run all tests
-- Use `poetry run pytest -m integration` for integration tests only
-- Use `poetry run pytest -m "not slow"` to skip slow tests
+- Use `make test-unit` to run unit tests
+- Use `make test-integration` to run integration tests
+- Use `make test` to run all tests
+- Use `poetry run pytest tests/` to run all tests (manual)
+- Use `poetry run pytest -m integration` for integration tests only (manual)
+- Use `poetry run pytest -m "not slow"` to skip slow tests (manual)
+
+## Code Quality
+
+- Use `make format` to format code (black, isort, autoflake)
+- Use `make format-check` to check formatting without changes
+- Use `make lint` to run linting (flake8, mypy)
+- Use `make quality` to run all quality checks
+- Use `make autofix` to auto-fix code quality issues
 
 ## Rationale
 
