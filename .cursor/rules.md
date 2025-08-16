@@ -67,6 +67,11 @@ response = client.chat_completion([
     {"role": "user", "content": "Hello!"}
 ])
 
+# Alternative: using completion alias
+response = client.completion([
+    {"role": "user", "content": "Hello!"}
+])
+
 # Structured output (requires instructor=True)
 client = get_llm_client(provider="openai", instructor=True)
 result = client.structured_completion(messages, MyPydanticModel)

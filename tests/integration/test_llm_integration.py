@@ -47,6 +47,22 @@ class TestLLMIntegration:
         assert len(response) > 0
         assert "Tokyo" in response or "japan" in response.lower()
 
+    def test_completion_alias(self):
+        """Test that completion method works as alias for chat_completion."""
+        messages = [
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": "Say 'test completed' exactly."},
+        ]
+
+        # Test completion method (alias)
+        response = self.client.completion(messages, temperature=0.1)
+
+        # Assertions
+        assert response is not None
+        assert isinstance(response, str)
+        assert len(response) > 0
+        assert "test completed" in response.lower()
+
     def test_chat_completion_convenience_function(self):
         """Test the convenience chat_completion function."""
         messages = [{"role": "user", "content": "What's the capital of France?"}]
@@ -405,6 +421,21 @@ class TestLlamaCppIntegration:
         assert isinstance(response, str)
         assert len(response) > 0
         assert "4" in response
+
+    def test_completion_alias(self):
+        """Test that completion method works as alias for chat_completion."""
+        messages = [
+            {"role": "system", "content": "You are a helpful assistant. Be concise."},
+            {"role": "user", "content": "What is 3+3? Answer with just the number."},
+        ]
+
+        response = self.client.completion(messages, temperature=0.1, max_tokens=10)
+
+        # Assertions
+        assert response is not None
+        assert isinstance(response, str)
+        assert len(response) > 0
+        assert "6" in response
 
     def test_chat_completion_with_conversation(self):
         """Test chat completion with conversation history."""
