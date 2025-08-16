@@ -16,6 +16,7 @@ from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
 
+from cogents.base.base import BaseConversationAgent
 from cogents.common.lg_hooks import NodeLoggingCallback, TokenUsageCallback
 from cogents.common.llm import get_llm_client_instructor
 from cogents.common.llm.token_tracker import get_token_tracker
@@ -32,7 +33,7 @@ from .summarizer import Summarizer
 logger = get_logger(__name__)
 
 
-class AskuraAgent:
+class AskuraAgent(BaseConversationAgent):
     """
     A general-purpose dynamic conversation agent.
 
@@ -43,12 +44,12 @@ class AskuraAgent:
 
     def __init__(self, config: AskuraConfig, extraction_tools: Optional[Dict[str, Any]] = None):
         """Initialize the AskuraAgent."""
+        # Initialize base class with LLM configuration
+        super().__init__(llm_provider=config.llm_api_provider, model_name=config.model_name)
+        
         self.config = config
         self.extraction_tools = extraction_tools or {}
         self.checkpointer = InMemorySaver()
-
-        # Initialize LLM client (optional)
-        self.llm = get_llm_client_instructor(provider=config.llm_api_provider, chat_model=config.model_name)
 
         # Initialize components (pass LLM client to enable intelligent behavior)
         self.conversation_manager = ConversationManager(config, llm_client=self.llm)
@@ -58,14 +59,28 @@ class AskuraAgent:
         self.memory = Memory()
 
         # Build the conversation graph
-        self.graph = self._build_conversation_graph()
-        self._export_graph()
+        self.graph = self._build_graph()
+        self.export_graph()
 
-        # Session storage
-        self._session_states: Dict[str, AskuraState] = {}
+    def _build_graph(self) -> StateGraph:
+        """Build the agent's graph. Required by BaseGraphicAgent."""
+        return self._build_conversation_graph()
+
+    def get_state_class(self):
+        """Get the state class for this agent's graph. Required by BaseGraphicAgent."""
+        return AskuraState
+
+    def run(self, user_message: str, context: Dict[str, Any] = None, config: Optional[RunnableConfig] = None) -> str:
+        """Run the agent with a user message and context. Required by BaseAgent."""
+        # Create a temporary user ID for standalone run
+        user_id = "standalone_user"
+        
+        # Start a new conversation
+        response = self.start_conversation(user_id, user_message)
+        return response.message
 
     def start_conversation(self, user_id: str, initial_message: Optional[str] = None) -> AskuraResponse:
-        """Start a new conversation with a user."""
+        """Start a new conversation with a user. Required by BaseConversationAgent."""
         session_id = str(uuid.uuid4())
         now = self._now_iso()
 
@@ -103,7 +118,7 @@ class AskuraAgent:
         return response
 
     def process_user_message(self, user_id: str, session_id: str, message: str) -> AskuraResponse:
-        """Process a user message and return the agent's response."""
+        """Process a user message and return the agent's response. Required by BaseConversationAgent."""
 
         # Get the current state
         state = self._session_states.get(session_id)
@@ -128,31 +143,6 @@ class AskuraAgent:
     def get_session_state(self, session_id: str) -> Optional[AskuraState]:
         """Get the state for a specific session."""
         return self._session_states.get(session_id)
-
-    def list_sessions(self) -> List[str]:
-        """List all active session IDs."""
-        return list(self._session_states.keys())
-
-    def clear_session(self, session_id: str) -> bool:
-        """Clear a specific session."""
-        if session_id in self._session_states:
-            del self._session_states[session_id]
-            return True
-        return False
-
-    def get_token_usage_stats(self) -> Dict[str, Any]:
-        """Get comprehensive token usage statistics."""
-        return get_token_tracker().get_stats()
-
-    def print_token_usage_summary(self):
-        """Print a brief structured token usage summary."""
-        stats = self.get_token_usage_stats()
-        if stats["total_tokens"] > 0:
-            print(
-                f"FINAL_SUMMARY: {stats['total_tokens']} total | {stats['total_calls']} calls | P:{stats['total_prompt_tokens']} C:{stats['total_completion_tokens']}"
-            )
-        else:
-            print("FINAL_SUMMARY: 0 total | 0 calls | P:0 C:0")
 
     def _run_graph(self, state: AskuraState) -> tuple[AskuraResponse, AskuraState]:
         """Run the conversation graph with the given state."""
@@ -243,29 +233,8 @@ class AskuraAgent:
 
         return builder.compile(checkpointer=self.checkpointer, interrupt_before=["human_review"])
 
-    def _export_graph(self):
-        """Export the agent graph visualization to PNG format."""
-        try:
-            pass
-        except ImportError:
-            logger.debug("pygraphviz is not installed, skipping graph export")
-            return
-
-        try:
-            graph_structure = self.graph.get_graph()
-            graph_structure.draw_png(os.path.join(os.path.dirname(__file__), "askura_agent_graph.png"))
-            logger.info("Graph exported successfully to askura_agent_graph.png")
-        except Exception as e:
-            logger.error(f"Failed to export graph: {e}")
-            try:
-                graph_structure = self.graph.get_graph()
-                graph_structure.draw_mermaid_png("askura_agent_graph.png")
-                logger.info("Graph exported successfully using Mermaid fallback")
-            except Exception as fallback_error:
-                logger.error(f"Failed to export graph with fallback: {fallback_error}")
-
     def _create_response(self, state: AskuraState) -> AskuraResponse:
-        """Create response from final state."""
+        """Create response from final state. Required by BaseConversationAgent."""
         # Get last assistant message
         last_message = None
         for msg in reversed(state.messages):
@@ -311,10 +280,6 @@ class AskuraAgent:
             return 1.0
 
         return min(filled_slots / total_slots, 1.0)
-
-    def _now_iso(self) -> str:
-        """Get current time in ISO format."""
-        return datetime.now(timezone.utc).isoformat()
 
     def _start_deep_thinking_node(self, state: AskuraState, config: RunnableConfig) -> dict:
         """Start deep thinking node - indicates deep processing is beginning."""
