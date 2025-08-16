@@ -47,6 +47,22 @@ class TestLLMIntegration:
         assert len(response) > 0
         assert "Tokyo" in response or "japan" in response.lower()
 
+    def test_completion_alias(self):
+        """Test that completion method works as alias for chat_completion."""
+        messages = [
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": "Say 'test completed' exactly."},
+        ]
+
+        # Test completion method (alias)
+        response = self.client.completion(messages, temperature=0.1)
+
+        # Assertions
+        assert response is not None
+        assert isinstance(response, str)
+        assert len(response) > 0
+        assert "test completed" in response.lower()
+
     def test_chat_completion_convenience_function(self):
         """Test the convenience chat_completion function."""
         messages = [{"role": "user", "content": "What's the capital of France?"}]
@@ -371,3 +387,133 @@ class TestTokenUsageIntegration:
         # Should be roughly proportional to text length
         assert usage.prompt_tokens > 5  # Should be more than 5 tokens for that text
         assert usage.completion_tokens > 5
+
+
+@pytest.mark.integration
+@pytest.mark.slow
+class TestLlamaCppIntegration:
+    """Integration tests for LlamaCpp LLM functionality."""
+
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        """Setup test environment."""
+        # Check if model path is available
+        model_path = os.getenv("LLAMACPP_MODEL_PATH")
+        if not model_path:
+            pytest.skip("LLAMACPP_MODEL_PATH not set in environment")
+        
+        if not os.path.exists(model_path):
+            pytest.skip(f"Model file not found at {model_path}")
+
+        self.client = get_llm_client(provider="llamacpp", model_path=model_path)
+
+    def test_chat_completion_basic(self):
+        """Test basic chat completion with llamacpp."""
+        messages = [
+            {"role": "system", "content": "You are a helpful assistant. Be concise."},
+            {"role": "user", "content": "What is 2+2? Answer with just the number."},
+        ]
+
+        response = self.client.chat_completion(messages, temperature=0.1, max_tokens=10)
+
+        # Assertions
+        assert response is not None
+        assert isinstance(response, str)
+        assert len(response) > 0
+        assert "4" in response
+
+    def test_completion_alias(self):
+        """Test that completion method works as alias for chat_completion."""
+        messages = [
+            {"role": "system", "content": "You are a helpful assistant. Be concise."},
+            {"role": "user", "content": "What is 3+3? Answer with just the number."},
+        ]
+
+        response = self.client.completion(messages, temperature=0.1, max_tokens=10)
+
+        # Assertions
+        assert response is not None
+        assert isinstance(response, str)
+        assert len(response) > 0
+        assert "6" in response
+
+    def test_chat_completion_with_conversation(self):
+        """Test chat completion with conversation history."""
+        messages = [
+            {"role": "system", "content": "You are a helpful math tutor."},
+            {"role": "user", "content": "What is 5 * 3?"},
+            {"role": "assistant", "content": "5 * 3 = 15"},
+            {"role": "user", "content": "What about 15 + 7?"},
+        ]
+
+        response = self.client.chat_completion(messages, temperature=0.1, max_tokens=20)
+
+        # Assertions
+        assert response is not None
+        assert isinstance(response, str)
+        assert len(response) > 0
+
+    def test_structured_completion(self):
+        """Test structured completion with llamacpp."""
+        from pydantic import BaseModel, Field
+
+        class MathResult(BaseModel):
+            problem: str = Field(description="The math problem")
+            answer: int = Field(description="The numerical answer")
+            explanation: str = Field(description="Brief explanation")
+
+        # Create client with instructor enabled
+        model_path = os.getenv("LLAMACPP_MODEL_PATH")
+        client = get_llm_client(provider="llamacpp", model_path=model_path, instructor=True)
+
+        messages = [
+            {
+                "role": "user",
+                "content": "Solve this math problem: What is 7 + 5? Provide a structured response."
+            }
+        ]
+
+        result = client.structured_completion(
+            messages, 
+            MathResult,
+            temperature=0.1, 
+            max_tokens=200,
+            attempts=3
+        )
+
+        # Assertions
+        assert isinstance(result, MathResult)
+        assert result.answer == 12
+        assert "7" in result.problem and "5" in result.problem
+        assert len(result.explanation) > 0
+
+    def test_vision_not_supported(self):
+        """Test that vision methods raise NotImplementedError."""
+        with pytest.raises(NotImplementedError, match="Vision capabilities are not supported"):
+            self.client.understand_image("/path/to/image.jpg", "What's in this image?")
+
+        with pytest.raises(NotImplementedError, match="Vision capabilities are not supported"):
+            self.client.understand_image_from_url("http://example.com/image.jpg", "What's in this image?")
+
+    def test_token_tracking(self):
+        """Test that token usage is tracked for llamacpp calls."""
+        from cogents.common.llm.token_tracker import get_token_tracker
+
+        # Reset tracker
+        tracker = get_token_tracker()
+        tracker.reset()
+
+        messages = [
+            {"role": "user", "content": "Say hello"},
+        ]
+
+        response = self.client.chat_completion(messages, temperature=0.1, max_tokens=10)
+
+        # Should have some token usage recorded (estimated)
+        assert tracker.get_total_tokens() > 0
+        assert tracker.call_count > 0
+
+        # Get latest usage
+        latest_usage = tracker.usage_history[-1]
+        assert latest_usage.estimated == True  # Should be estimated for llamacpp
+        assert latest_usage.call_type == "completion"
