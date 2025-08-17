@@ -1,10 +1,18 @@
 from typing import Optional
 
 from .base import BaseLLMClient
-from .llamacpp import LLMClient as LlamaCppLLMClient
 from .ollama import LLMClient as OllamaLLMClient
 from .openai import LLMClient as OpenAILLMClient
 from .openrouter import LLMClient as OpenRouterLLMClient
+
+# Optional import - llamacpp might not be available
+try:
+    from .llamacpp import LLMClient as LlamaCppLLMClient
+
+    LLAMACPP_AVAILABLE = True
+except ImportError:
+    LlamaCppLLMClient = None
+    LLAMACPP_AVAILABLE = False
 from .token_tracker import TokenUsage, TokenUsageTracker, get_token_tracker, record_token_usage
 
 __all__ = [
@@ -83,6 +91,8 @@ def get_llm_client(
             **kwargs,
         )
     elif provider == "llamacpp":
+        if not LLAMACPP_AVAILABLE:
+            raise ValueError("llamacpp provider is not available. Please install the required dependencies.")
         return LlamaCppLLMClient(
             instructor=instructor,
             chat_model=chat_model,

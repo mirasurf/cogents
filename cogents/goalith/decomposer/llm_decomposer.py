@@ -14,6 +14,7 @@ from cogents.common.logging import get_logger
 from ..base.decomposer import GoalDecomposer
 from ..base.errors import DecompositionError
 from ..base.goal_node import GoalNode, NodeType
+from .prompts import get_decomposition_system_prompt, get_decomposition_user_prompt, get_fallback_prompt
 
 logger = get_logger(__name__)
 
@@ -53,7 +54,11 @@ class GoalDecomposition(BaseModel):
     decomposition_strategy: str = Field(
         description="Strategy used: 'sequential', 'parallel', 'hybrid', or 'milestone-based'"
     )
-    subgoals: List[SubgoalSpec] = Field(description="List of subgoals and tasks, in logical order", min_length=1)
+    subgoals: List[SubgoalSpec] = Field(
+        description="List of subgoals and tasks, in logical order (maximum 6 items for focus and manageability)",
+        min_length=1,
+        max_length=6,
+    )
     success_criteria: List[str] = Field(
         description="Criteria that indicate successful completion of the overall goal",
         default_factory=list,
@@ -129,11 +134,17 @@ class LLMDecomposer(GoalDecomposer):
         try:
             logger.info(f"Decomposing goal: {goal_node.description}")
 
-            # Build the decomposition prompt
-            prompt = self._build_decomposition_prompt(goal_node, context)
+            # Build the decomposition prompts using the new structure
+            system_prompt = get_decomposition_system_prompt()
+            user_prompt = get_decomposition_user_prompt(
+                goal_node=goal_node,
+                context=context,
+                domain_context=self._domain_context,
+                include_historical_patterns=self._include_historical,
+            )
 
-            # Get structured decomposition from LLM
-            messages = [{"role": "user", "content": prompt}]
+            # Get structured decomposition from LLM with system and user messages
+            messages = [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}]
 
             decomposition: GoalDecomposition = self._llm_client.structured_completion(
                 messages=messages,
@@ -168,143 +179,65 @@ class LLMDecomposer(GoalDecomposer):
             return subgoal_nodes
 
         except Exception as e:
-            logger.error(f"LLM decomposition failed for goal {goal_node.id}: {e}")
-            raise DecompositionError(f"LLM decomposition failed: {e}")
+            logger.warning(f"Structured LLM decomposition failed for goal {goal_node.id}: {e}")
+            logger.info("Attempting fallback decomposition...")
 
-    def _build_decomposition_prompt(self, goal_node: GoalNode, context: Optional[Dict[str, Any]] = None) -> str:
-        """Build the decomposition prompt for the LLM."""
+            # Try fallback decomposition with simpler prompt
+            try:
+                return self._fallback_decomposition(goal_node, context)
+            except Exception as fallback_error:
+                logger.error(f"Fallback decomposition also failed: {fallback_error}")
+                raise DecompositionError(f"LLM decomposition failed: {e}")
 
-        # Base prompt
-        prompt = f"""You are an expert goal decomposition assistant. Your task is to break down a goal into actionable subgoals and tasks.
+    def _fallback_decomposition(self, goal_node: GoalNode, context: Optional[Dict[str, Any]] = None) -> List[GoalNode]:
+        """
+        Fallback decomposition method when structured completion fails.
+        Uses a simpler prompt and attempts to parse the response manually.
+        """
+        fallback_prompt = get_fallback_prompt()
+        user_prompt = get_decomposition_user_prompt(
+            goal_node=goal_node,
+            context=context,
+            domain_context=self._domain_context,
+            include_historical_patterns=False,  # Simpler for fallback
+        )
 
-**GOAL TO DECOMPOSE:**
-{goal_node.description}
+        # Combine prompts for fallback
+        combined_prompt = f"{fallback_prompt}\n\n{user_prompt}"
 
-**GOAL DETAILS:**
-- Type: {goal_node.type}
-- Priority: {goal_node.priority}
-- Current Status: {goal_node.status}"""
+        # Get simple text response
+        messages = [{"role": "user", "content": combined_prompt}]
+        response = self._llm_client.completion(
+            messages=messages,
+            temperature=self._temperature,
+            max_tokens=self._max_tokens,
+        )
 
-        # Add deadline if present
-        if goal_node.deadline:
-            prompt += f"\n- Deadline: {goal_node.deadline.isoformat()}"
+        # Create simplified subgoals from the response
+        # This is a basic implementation - in practice, you might want more sophisticated parsing
+        lines = response.split("\n")
+        subgoals = []
 
-        # Add existing context
-        if goal_node.context:
-            prompt += "\n- Existing Context:"
-            for key, value in goal_node.context.items():
-                prompt += f"\n  - {key}: {value}"
+        for i, line in enumerate(lines[:6]):  # Limit to 6 items max
+            line = line.strip()
+            if line and len(line) > 10:  # Basic filtering
+                # Create a simple subgoal
+                node = GoalNode(
+                    description=line.lstrip("1234567890.-• "),  # Remove numbering
+                    type=NodeType.SUBGOAL,
+                    priority=5.0,  # Default priority
+                    parent=goal_node.id,
+                    context={
+                        "llm_generated": True,
+                        "fallback_mode": True,
+                        "parent_goal_id": goal_node.id,
+                    },
+                    decomposer_name=self.name,
+                )
+                subgoals.append(node)
 
-        # Add tags if present
-        if goal_node.tags:
-            prompt += f"\n- Tags: {', '.join(goal_node.tags)}"
-
-        # Add additional context
-        if context:
-            prompt += "\n\n**ADDITIONAL CONTEXT:**"
-            for key, value in context.items():
-                prompt += f"\n- {key}: {value}"
-
-        # Add domain-specific context
-        if self._domain_context:
-            prompt += "\n\n**DOMAIN CONTEXT:**"
-            for key, value in self._domain_context.items():
-                prompt += f"\n- {key}: {value}"
-
-        # Add goal type specific guidance
-        type_guidance = self._get_type_specific_guidance(goal_node.type)
-        if type_guidance:
-            prompt += f"\n\n**TYPE-SPECIFIC GUIDANCE:**\n{type_guidance}"
-
-        # Add historical patterns if enabled
-        if self._include_historical:
-            patterns = self._get_historical_patterns(goal_node)
-            if patterns:
-                prompt += f"\n\n**HISTORICAL PATTERNS:**\n{patterns}"
-
-        # Add decomposition guidelines
-        prompt += """
-
-**DECOMPOSITION GUIDELINES:**
-
-1. **Clarity**: Each subgoal should be clear, specific, and actionable
-2. **Granularity**: Break down into appropriate-sized chunks (not too big, not too small)
-3. **Dependencies**: Identify which subgoals depend on others
-4. **Types**: Use 'task' for concrete actions, 'subgoal' for intermediate objectives, 'goal' for major milestones
-5. **Priority**: Assign priorities based on importance and urgency
-6. **Effort**: Estimate effort realistically
-7. **Strategy**: Choose the best decomposition approach:
-   - Sequential: Tasks must be done in order
-   - Parallel: Tasks can be done simultaneously
-   - Hybrid: Mix of sequential and parallel work
-   - Milestone-based: Organized around key milestones
-
-**PRIORITY SCORING:**
-- 9-10: Critical/urgent tasks that must be done first
-- 7-8: High priority tasks that are important for success
-- 5-6: Medium priority tasks that support the goal
-- 3-4: Low priority tasks that are nice to have
-- 1-2: Optional tasks that can be deferred
-
-**EFFORT ESTIMATION:**
-Use terms like: "15 minutes", "1 hour", "half day", "1 day", "1 week", or qualitative terms like "low", "medium", "high"
-
-**OUTPUT REQUIREMENTS:**
-Provide a structured decomposition with clear reasoning and practical subgoals that can be executed."""
-
-        return prompt
-
-    def _get_type_specific_guidance(self, node_type: NodeType) -> str:
-        """Get guidance specific to the node type."""
-
-        guidance = {
-            NodeType.GOAL: """
-For GOAL decomposition:
-- Break into major phases or milestones
-- Consider resource allocation and timeline
-- Include planning, execution, and review phases
-- Ensure measurable outcomes""",
-            NodeType.SUBGOAL: """
-For SUBGOAL decomposition:
-- Focus on concrete deliverables
-- Keep tasks specific and actionable
-- Consider dependencies and sequencing
-- Include validation steps""",
-            NodeType.TASK: """
-For TASK decomposition:
-- Break into atomic actions
-- Each subtask should be completable in one session
-- Include preparation and cleanup steps
-- Consider error handling and rollback""",
-        }
-
-        return guidance.get(node_type, "")
-
-    def _get_historical_patterns(self, goal_node: GoalNode) -> str:
-        """Get historical decomposition patterns for similar goals."""
-
-        # This is a placeholder for actual historical pattern analysis
-        # In a real implementation, this would query the memory system
-        # for similar goals and their successful decomposition patterns
-
-        patterns = []
-
-        # Add pattern based on goal tags
-        if "planning" in goal_node.tags:
-            patterns.append(
-                "- Planning goals typically benefit from research → analysis → strategy → implementation phases"
-            )
-
-        if "project" in goal_node.tags:
-            patterns.append("- Project goals often follow: requirements → design → development → testing → deployment")
-
-        if "learning" in goal_node.tags:
-            patterns.append("- Learning goals work well with: assessment → planning → study → practice → evaluation")
-
-        if patterns:
-            return "\n".join(patterns)
-
-        return ""
+        logger.info(f"Fallback decomposition created {len(subgoals)} subgoals")
+        return subgoals
 
     def _convert_to_goal_nodes(
         self,
