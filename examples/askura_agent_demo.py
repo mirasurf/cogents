@@ -23,7 +23,7 @@ def create_travel_planning_config() -> AskuraConfig:
     """Create configuration for a simple trip planning scenario."""
     information_slots = [
         InformationSlot(
-            name="trip_plan_context",
+            name="Context information about the trip",
             description="Detailed travel plan, required fields: destination, dates, interests. Optional fields: budgets, group size, transportation and more",
             priority=5,
             required=True,
