@@ -6,9 +6,9 @@ Provides structured goal decomposition using LLM clients with instructor integra
 
 from typing import Any, Dict, List, Optional
 
-from cogent_nano.utils.llm_utils import get_llm_instructor
 from pydantic import BaseModel, Field
 
+from cogents.common.llm import get_llm_client_instructor
 from cogents.common.logging import get_logger
 
 from ..base.decomposer import GoalDecomposer
@@ -79,6 +79,7 @@ class LLMDecomposer(GoalDecomposer):
 
     def __init__(
         self,
+        provider: str = "openrouter",
         model_name: Optional[str] = None,
         temperature: float = 0.3,
         max_tokens: int = 2000,
@@ -97,25 +98,14 @@ class LLMDecomposer(GoalDecomposer):
             domain_context: Domain-specific context to include
             include_historical_patterns: Whether to include historical decomposition patterns
         """
+        self._provider = provider
         self._model_name = model_name
         self._temperature = temperature
         self._max_tokens = max_tokens
         self._name = name
         self._domain_context = domain_context or {}
         self._include_historical = include_historical_patterns
-
-        # Initialize LLM client lazily - will be set when first needed
-        self._llm_client = None
-
-    def _ensure_llm_client(self):
-        """Ensure LLM client is initialized (lazy initialization)."""
-        if self._llm_client is None:
-            try:
-                self._llm_client = get_llm_instructor()
-                logger.info(f"Initialized LLM decomposer with model: {self._model_name or 'default'}")
-            except Exception as e:
-                logger.error(f"Failed to initialize LLM client: {e}")
-                raise DecompositionError(f"LLM client initialization failed: {e}")
+        self._llm_client = get_llm_client_instructor(provider=provider, chat_model=model_name)
 
     @property
     def name(self) -> str:
@@ -136,9 +126,6 @@ class LLMDecomposer(GoalDecomposer):
         Raises:
             DecompositionError: If decomposition fails
         """
-        # Ensure LLM client is initialized before use
-        self._ensure_llm_client()
-
         try:
             logger.info(f"Decomposing goal: {goal_node.description}")
 

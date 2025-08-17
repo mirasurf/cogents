@@ -105,7 +105,7 @@ class InformationSlot:
 ### Basic Usage
 
 ```python
-from cogent_nano.agents.askura_agent import AskuraAgent, AskuraConfig, InformationSlot
+from cogents.agents.askura_agent import AskuraAgent, AskuraConfig, InformationSlot
 
 # Define information slots
 information_slots = [

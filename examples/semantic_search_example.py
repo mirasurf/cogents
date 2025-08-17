@@ -1,5 +1,5 @@
 """
-Simplified Semantic Search Example for cogent_nano.
+Simplified Semantic Search Example for cogents.
 
 This example demonstrates the core features of the semantic search system:
 - Basic search with web fallback

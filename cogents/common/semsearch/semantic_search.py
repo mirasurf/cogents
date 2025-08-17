@@ -1,5 +1,5 @@
 """
-Semantic search orchestrator for cogent_nano.
+Semantic search orchestrator for cogents.
 
 This module provides the main SemanticSearch class that coordinates between
 web search, document processing, vector storage, and semantic retrieval.

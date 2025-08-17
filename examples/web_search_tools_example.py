@@ -2,7 +2,7 @@
 Example demonstrating the use of web search tools.
 
 This example shows how to use the Tavily search and Google AI search tools
-from the cogent_nano.tools.web_search module.
+from the cogents.tools.web_search module.
 """
 
 import asyncio
