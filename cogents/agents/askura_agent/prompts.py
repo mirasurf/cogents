@@ -4,8 +4,8 @@ Prompts for AskuraAgent - Structured prompts for conversation analysis and manag
 
 
 # Structured extraction prompts - optimized for structured_completion
-CONVERSATION_ANALYSIS_PROMPTS = {
-    "conversation_context": """Analyze conversation style and alignment with purpose: {conversation_purpose}
+CONVERSATION_ANALYSIS_SYSTEM_PROMPTS = {
+    "conversation_context": """Analyze conversation style and alignment with purpose.
 
 Assess key factors:
 - Style: direct (goal-oriented), exploratory (curious), casual (relaxed)
@@ -17,27 +17,8 @@ Assess key factors:
   * 0.0-0.3: Off-track, not addressing purpose
   * 0.4-0.6: Partially on-track, some relevance  
   * 0.7-0.8: Mostly on-track, good alignment
-  * 0.9-1.0: Highly focused on purpose
-
-Recent messages: {recent_messages}""",
+  * 0.9-1.0: Highly focused on purpose""",
     "knowledge_gap_analysis": """Analyze knowledge gap and suggest next topics to help achieve conversation purpose.
-
-**Conversation Purpose:** {conversation_purpose}
-
-**Current Context:**
-{conversation_context}
-
-**What We Know (Extracted Information):**
-{extracted_info}
-
-**What We're Missing (Required Information):**
-{missing_info}
-
-**Retrieved Memory:**
-{memory}
-
-**Recent Conversation:**
-{recent_messages}
 
 **Instructions:**
 1. Evaluate how well current knowledge aligns with the conversation purpose
@@ -57,11 +38,6 @@ Intent Classification (focus ONLY on last message):
 - "smalltalk": Greetings, pleasantries, casual conversation
 - "task": Goal-oriented, information requests, specific questions, task content
 
-Context: {conversation_context}
-Ready to summarize: {ready_to_summarize}
-Available actions: {available_actions}
-Recent messages: {recent_messages}
-
 Decision Guidelines:
 - If MOST RECENT message is smalltalk: respond appropriately but guide toward task
 - If MOST RECENT message is task: focus on gathering missing information
@@ -73,16 +49,6 @@ Decision Guidelines:
 
 Reasoning must explicitly reference the MOST RECENT user message.""",
     "message_routing": """Evaluate if the user's message requires deep thinking or can be handled with a quick response to guide conversation.
-
-**Conversation Purpose:** {conversation_purpose}
-
-**Current User Message:** {user_message}
-
-**Conversation Context:**
-{conversation_context}
-
-**Current Extracted Information:**
-{extracted_info}
 
 **Decision Criteria:**
 
@@ -103,9 +69,64 @@ Quick response is appropriate when:
 4. Explain your reasoning clearly""",
 }
 
+CONVERSATION_ANALYSIS_USER_PROMPTS = {
+    "conversation_context": """Conversation purpose: {conversation_purpose}
+
+Recent messages: {recent_messages}""",
+    "knowledge_gap_analysis": """**Conversation Purpose:** {conversation_purpose}
+
+**Current Context:**
+{conversation_context}
+
+**What We Know (Extracted Information):**
+{extracted_info}
+
+**What We're Missing (Required Information):**
+{missing_info}
+
+**Retrieved Memory:**
+{memory}
+
+**Recent Conversation:**
+{recent_messages}""",
+    "determine_next_action": """Context: {conversation_context}
+Ready to summarize: {ready_to_summarize}
+Available actions: {available_actions}
+Recent messages: {recent_messages}""",
+    "message_routing": """**Conversation Purpose:** {conversation_purpose}
+
+**Current User Message:** {user_message}
+
+**Conversation Context:**
+{conversation_context}
+
+**Current Extracted Information:**
+{extracted_info}""",
+}
+
+# Backward compatibility - combined prompts for legacy usage
+CONVERSATION_ANALYSIS_PROMPTS = {
+    "conversation_context": CONVERSATION_ANALYSIS_SYSTEM_PROMPTS["conversation_context"] + "\n\n" + CONVERSATION_ANALYSIS_USER_PROMPTS["conversation_context"],
+    "knowledge_gap_analysis": CONVERSATION_ANALYSIS_SYSTEM_PROMPTS["knowledge_gap_analysis"] + "\n\n" + CONVERSATION_ANALYSIS_USER_PROMPTS["knowledge_gap_analysis"],
+    "determine_next_action": CONVERSATION_ANALYSIS_SYSTEM_PROMPTS["determine_next_action"] + "\n\n" + CONVERSATION_ANALYSIS_USER_PROMPTS["determine_next_action"],
+    "message_routing": CONVERSATION_ANALYSIS_SYSTEM_PROMPTS["message_routing"] + "\n\n" + CONVERSATION_ANALYSIS_USER_PROMPTS["message_routing"],
+}
+
+
+def get_conversation_analysis_prompts(analysis_type: str, **kwargs) -> tuple[str, str]:
+    """Get separated system and user prompts for conversation analysis."""
+    system_prompt = CONVERSATION_ANALYSIS_SYSTEM_PROMPTS.get(analysis_type, "")
+    user_prompt_template = CONVERSATION_ANALYSIS_USER_PROMPTS.get(analysis_type, "")
+    
+    try:
+        user_prompt = user_prompt_template.format(**kwargs)
+        return system_prompt, user_prompt
+    except KeyError:
+        return system_prompt, user_prompt_template
+
 
 def get_conversation_analysis_prompt(analysis_type: str, **kwargs) -> str:
-    """Get a conversation analysis prompt for the specified type."""
+    """Backward compatibility - get combined prompt for conversation analysis."""
     prompt = CONVERSATION_ANALYSIS_PROMPTS.get(analysis_type, "")
     try:
         return prompt.format(**kwargs)
@@ -114,16 +135,8 @@ def get_conversation_analysis_prompt(analysis_type: str, **kwargs) -> str:
 
 
 # TODO (xmingc): I like the idea of letting the system hold a limited number of improvisations.
-RESPONSE_GENERATION_PROMPT = """You are a witty and creative travel planning assistant. Generate a short, precise, and inspiring question that incorporates relevant context naturally. Feel free to make slight improvisations - add wordplay, use creative language, make clever observations, or add a touch of humor when appropriate. The question should be conversational, memorable, and always encouraging.
+RESPONSE_GENERATION_SYSTEM_PROMPT = """You are a witty and creative travel planning assistant. Generate a short, precise, and inspiring question that incorporates relevant context naturally. Feel free to make slight improvisations - add wordplay, use creative language, make clever observations, or add a touch of humor when appropriate. The question should be conversational, memorable, and always encouraging.
 Keep it under 3 sentences but make it delightful and engaging. Return only the question, no additional text.
-
-**Conversation Purpose:** {conversation_purpose}
-**Missing Key Information:** {missing_required_slots}
-
-**Current Situation:**
-- User's intent: {intent_type}  
-- Context: {next_action_reasoning}
-- What we know: {known_slots}
 
 **Strategic Response Guidelines:**
 - **Balance natural conversation with purposeful direction** - Be genuinely conversational but strategically guide toward missing information
@@ -146,8 +159,31 @@ Keep it under 3 sentences but make it delightful and engaging. Return only the q
 
 Generate a single, natural response without quotes or formatting - just the raw conversational text that feels natural while strategically moving toward the missing information we need."""
 
+RESPONSE_GENERATION_USER_PROMPT = """**Conversation Purpose:** {conversation_purpose}
+**Missing Key Information:** {missing_required_slots}
+
+**Current Situation:**
+- User's intent: {intent_type}  
+- Context: {next_action_reasoning}
+- What we know: {known_slots}
+
+Generate an appropriate response based on this context."""
+
+# Backward compatibility - combined prompt for legacy usage
+RESPONSE_GENERATION_PROMPT = RESPONSE_GENERATION_SYSTEM_PROMPT + "\n\n" + RESPONSE_GENERATION_USER_PROMPT
+
+
+def get_response_generation_prompts(**kwargs) -> tuple[str, str]:
+    """Get separated system and user prompts for response generation."""
+    try:
+        user_prompt = RESPONSE_GENERATION_USER_PROMPT.format(**kwargs)
+        return RESPONSE_GENERATION_SYSTEM_PROMPT, user_prompt
+    except KeyError:
+        return RESPONSE_GENERATION_SYSTEM_PROMPT, RESPONSE_GENERATION_USER_PROMPT
+
 
 def get_response_generation_prompt(**kwargs) -> str:
+    """Backward compatibility - get combined prompt for response generation."""
     try:
         return RESPONSE_GENERATION_PROMPT.format(**kwargs)
     except KeyError:
