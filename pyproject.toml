@@ -5,19 +5,18 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry]
 name = "cogents"
 version = "0.0.8"
-description = "A collection of essential, high-quality building blocks for constructing sophisticated multi-agent systems."
+description = "Towards a cognitive agentic framework"
 readme = "README.md"
 license = "MIT"
 authors = ["xming <chenxm35@gmail.com>"]
 maintainers = ["xming <chenxm35@gmail.com>"]
-keywords = ["template", "python", "library", "development"]
+keywords = ["agentic", "multi-agent", "framework", "cognition", "artificial intelligence"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Software Development :: Libraries :: Python Modules",
@@ -25,7 +24,7 @@ classifiers = [
 packages = [{include = "cogents"}]
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = "^3.11"
 pydantic = "^2.0.0"
 # LLM and AI dependencies
 openai = "^1.0.0"
@@ -58,6 +57,7 @@ colorlog = "^6.8.0"
 typing-extensions = "^4.8.0"
 deprecated = "^1.2.18"
 pygraphviz = "^1.14"
+networkx = "^3.5"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.0.0"
