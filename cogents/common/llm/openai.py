@@ -21,6 +21,11 @@ from openai import OpenAI
 
 from cogents.common.langsmith import configure_langsmith, is_langsmith_enabled
 from cogents.common.llm.base import BaseLLMClient
+from cogents.common.llm.token_tracker import (
+    estimate_token_usage,
+    extract_token_usage_from_openai_response,
+    get_token_tracker,
+)
 from cogents.common.logging import get_logger
 
 T = TypeVar("T")
@@ -87,7 +92,7 @@ class LLMClient(BaseLLMClient):
                 mode=Mode.JSON,
             )
 
-    def chat_completion(
+    def completion(
         self,
         messages: List[Dict[str, str]],
         temperature: float = 0.7,
@@ -125,6 +130,8 @@ class LLMClient(BaseLLMClient):
             if stream:
                 return response
             else:
+                # Log token usage if available
+                self._log_token_usage_if_available(response)
                 return response.choices[0].message.content
         except Exception as e:
             logger.error(f"Error in chat completion: {e}")
@@ -169,14 +176,37 @@ class LLMClient(BaseLLMClient):
         last_err = None
         for i in range(attempts):
             try:
+                # Capture token usage by enabling detailed response
+                kwargs_with_usage = kwargs.copy()
+                kwargs_with_usage.setdefault("stream", False)
+
                 result = self.instructor.create(
                     model=self.chat_model,
                     messages=messages,
                     response_model=response_model,
                     temperature=temperature,
                     max_tokens=max_tokens,
-                    **kwargs,
+                    **kwargs_with_usage,
                 )
+
+                # Try to capture token usage from instructor's underlying response
+                # The instructor library usually stores the raw response
+                if hasattr(result, "_raw_response"):
+                    self._log_token_usage_if_available(result._raw_response, "structured")
+                else:
+                    # If no raw response, try to estimate usage
+                    try:
+                        prompt_text = "\n".join([msg.get("content", "") for msg in messages])
+                        completion_text = str(result)
+                        if hasattr(result, "model_dump_json"):
+                            completion_text = result.model_dump_json()
+
+                        usage = estimate_token_usage(prompt_text, completion_text, self.chat_model, "structured")
+                        get_token_tracker().record_usage(usage)
+                        logger.debug(f"Estimated token usage for structured completion: {usage.total_tokens} tokens")
+                    except Exception as e:
+                        logger.debug(f"Could not estimate token usage: {e}")
+
                 return result
             except Exception as e:
                 last_err = e
@@ -246,6 +276,8 @@ class LLMClient(BaseLLMClient):
                 **kwargs,
             )
 
+            # Record token usage for vision call
+            self._log_token_usage_if_available(response, "vision")
             return response.choices[0].message.content
 
         except Exception as e:
@@ -298,8 +330,24 @@ class LLMClient(BaseLLMClient):
                 **kwargs,
             )
 
+            # Record token usage for vision URL call
+            self._log_token_usage_if_available(response, "vision")
             return response.choices[0].message.content
 
         except Exception as e:
             logger.error(f"Error analyzing image from URL: {e}")
             raise
+
+    def _log_token_usage_if_available(self, response, call_type: str = "completion"):
+        """Extract and record token usage from OpenAI response if available."""
+        try:
+            usage = extract_token_usage_from_openai_response(response, self.chat_model, call_type)
+            if usage:
+                get_token_tracker().record_usage(usage)
+                logger.debug(
+                    f"Token usage - Prompt: {usage.prompt_tokens}, "
+                    f"Completion: {usage.completion_tokens}, "
+                    f"Total: {usage.total_tokens} (model: {usage.model_name})"
+                )
+        except Exception as e:
+            logger.debug(f"Could not extract token usage: {e}")

@@ -35,7 +35,7 @@ def test_basic_chat():
         {"role": "user", "content": "What are the top 3 attractions in Paris?"},
     ]
 
-    response = client.chat_completion(messages=messages, temperature=0.7)
+    response = client.completion(messages=messages, temperature=0.7)
     print(f"🤖 Response: {response[:200]}...")
 
     return response

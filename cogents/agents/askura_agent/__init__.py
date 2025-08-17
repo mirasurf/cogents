@@ -7,8 +7,8 @@ collect required information through natural conversation flow.
 """
 
 from .askura_agent import AskuraAgent
-from .conversation_manager import ConversationManager
-from .information_extractor import InformationExtractor
+from .conversation import ConversationManager
+from .extractor import InformationExtractor
 from .models import AskuraConfig, AskuraResponse, AskuraState
 
 __all__ = [

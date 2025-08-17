@@ -11,9 +11,9 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import Send
 
-from cogents.agents.base import BaseResearcher, ResearchOutput
+from cogents.base.base import BaseResearcher
+from cogents.base.models import ResearchOutput
 from cogents.common.langsmith import configure_langsmith
-from cogents.common.llm import get_llm_client_instructor
 from cogents.common.logging import get_logger
 
 from .configuration import Configuration
@@ -45,23 +45,33 @@ class SeekraAgent(BaseResearcher):
     - format_final_answer(): Customize final answer formatting
     """
 
-    def __init__(self, configuration: Optional[Configuration] = None):
+    def __init__(
+        self,
+        configuration: Optional[Configuration] = None,
+        llm_provider: str = "openrouter",
+        model_name: Optional[str] = None,
+    ):
         """
         Initialize the SeekraAgent.
         Requires OPENROUTER_API_KEY, GEMINI_API_KEY, and instructor library.
         OPENROUTER_API_KEY is required for LLM functionality.
         GEMINI_API_KEY is required for real web search capabilities.
-        Instructor is required for structured output.
 
         Args:
             configuration: Optional Configuration instance. If not provided,
                           will use default configuration from environment.
+            llm_provider: LLM provider to use
+            model_name: Specific model name to use
         """
+        # Initialize base class
+        super().__init__(llm_provider=llm_provider, model_name=model_name)
+
         # Ensure LangSmith is configured for observability
         configure_langsmith()
 
-        # Initialize LLM client with instructor support
-        self.llm_client = get_llm_client_instructor(provider="openrouter")
+        # Override the LLM client with instructor support if needed
+        # Base class already initializes self.llm, so we can reuse it
+        self.llm_client = self.llm
 
         # Load prompts (can be overridden by subclasses)
         self.prompts = self.get_prompts()
@@ -320,7 +330,7 @@ class SeekraAgent(BaseResearcher):
                 4. Maintains factual accuracy based on the provided content
                 """
 
-                search_summary = self.llm_client.chat_completion(
+                search_summary = self.llm_client.completion(
                     messages=[{"role": "user", "content": summary_prompt}],
                     temperature=runnable_config.web_search_temperature,
                     max_tokens=runnable_config.web_search_max_tokens,
@@ -451,7 +461,7 @@ class SeekraAgent(BaseResearcher):
         )
 
         # Generate final answer using LLM
-        final_answer = self.llm_client.chat_completion(
+        final_answer = self.llm_client.completion(
             messages=[{"role": "user", "content": formatted_prompt}],
             temperature=runnable_config.answer_temperature,
             max_tokens=runnable_config.answer_max_tokens,

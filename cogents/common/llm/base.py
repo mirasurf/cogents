@@ -17,7 +17,7 @@ class BaseLLMClient(ABC):
         """
 
     @abstractmethod
-    def chat_completion(
+    def completion(
         self,
         messages: List[Dict[str, str]],
         temperature: float = 0.7,
