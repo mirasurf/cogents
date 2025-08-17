@@ -30,7 +30,7 @@ def main():
     print("🚀 Initializing SeekraAgent...")
     researcher = SeekraAgent(
         configuration=SeekraAgentConfig(
-            search_engine="google",
+            search_engine="tavily",
             number_of_initial_queries=2,
             max_research_loops=2,
         )

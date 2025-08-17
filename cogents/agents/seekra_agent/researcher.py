@@ -80,7 +80,7 @@ class SeekraAgent(BaseResearcher):
         self.configuration = configuration or Configuration()
 
         # Create the research graph
-        self.graph = self._create_research_graph()
+        self.graph = self._build_graph()
 
     def get_prompts(self) -> Dict[str, str]:
         """
@@ -213,7 +213,7 @@ class SeekraAgent(BaseResearcher):
         """
         return final_answer
 
-    def _create_research_graph(self) -> StateGraph:
+    def _build_graph(self) -> StateGraph:
         """Create the LangGraph research workflow."""
         state_class = self.get_state_class()
         workflow = StateGraph(state_class)
