@@ -14,7 +14,7 @@ from .models import (
     KnowledgeGapAnalysis,
     NextActionPlan,
 )
-from .prompts import get_conversation_analysis_prompt
+from .prompts import get_conversation_analysis_prompts
 
 logger = get_logger(__name__)
 
@@ -95,9 +95,9 @@ class Reflection:
             else:
                 recent_messages_text = "No recent messages"
 
-            # Get structured prompt for knowledge gap analysis
+            # Get structured prompts for knowledge gap analysis
             conversation_purpose = state.conversation_context.conversation_purpose
-            prompt = get_conversation_analysis_prompt(
+            system_prompt, user_prompt = get_conversation_analysis_prompts(
                 "knowledge_gap_analysis",
                 conversation_purpose=conversation_purpose,
                 conversation_context=state.conversation_context.to_dict(),
@@ -109,7 +109,10 @@ class Reflection:
 
             # Use structured completion for reliable analysis
             analysis: KnowledgeGapAnalysis = self.llm.structured_completion(
-                messages=[{"role": "user", "content": prompt}],
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
                 response_model=KnowledgeGapAnalysis,
                 temperature=0.3,
                 max_tokens=800,
@@ -154,7 +157,7 @@ class Reflection:
             # Get structured prompt for unified next action determination - preserve readability
             recent_messages_text = "\n".join([f"User: {msg}" for msg in recent_messages]) if recent_messages else ""
 
-            prompt = get_conversation_analysis_prompt(
+            system_prompt, user_prompt = get_conversation_analysis_prompts(
                 "determine_next_action",
                 conversation_context=context.to_dict(),
                 available_actions=allowed,
@@ -164,7 +167,10 @@ class Reflection:
 
             # Use structured completion with retry for reliable unified analysis
             result: NextActionPlan = self.llm.structured_completion(
-                messages=[{"role": "user", "content": prompt}],
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
                 response_model=NextActionPlan,
                 temperature=0.3,
                 max_tokens=300,

@@ -10,7 +10,7 @@ from cogents.common.llm import BaseLLMClient
 from cogents.common.logging import get_logger
 
 from .models import AskuraConfig, AskuraState, ConversationContext
-from .prompts import get_conversation_analysis_prompt, get_response_generation_prompt
+from .prompts import get_conversation_analysis_prompts, get_response_generation_prompts
 
 logger = get_logger(__name__)
 
@@ -50,8 +50,8 @@ class ConversationManager:
             # Prepare recent messages for analysis - optimize for token efficiency
             recent_messages_text = self._format_recent_messages(user_messages[-message_depth:])
 
-            # Get structured prompt for conversation analysis
-            prompt = get_conversation_analysis_prompt(
+            # Get structured prompts for conversation analysis
+            system_prompt, user_prompt = get_conversation_analysis_prompts(
                 "conversation_context",
                 conversation_purpose=context.conversation_purpose,
                 recent_messages=recent_messages_text,
@@ -59,7 +59,10 @@ class ConversationManager:
 
             # Use structured completion with retry for reliable analysis
             context = self.llm.structured_completion(
-                messages=[{"role": "user", "content": prompt}],
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
                 response_model=ConversationContext,
                 temperature=0.3,
                 max_tokens=500,
@@ -100,7 +103,7 @@ class ConversationManager:
             else "All key information has been collected"
         )
 
-        prompt = get_response_generation_prompt(
+        system_prompt, user_prompt = get_response_generation_prompts(
             conversation_purpose=conversation_purpose,
             missing_required_slots=missing_required_slots,
             intent_type=state.next_action_plan.intent_type if state.next_action_plan else "casual conversation",
@@ -110,7 +113,10 @@ class ConversationManager:
             known_slots=str(state.extracted_info) if state.extracted_info else "Nothing specific collected yet",
         )
         utterance = self.llm.completion(
-            messages=[{"role": "system", "content": prompt}],
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
             temperature=0.7,
             max_tokens=200,
         )

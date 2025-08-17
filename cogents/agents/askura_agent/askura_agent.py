@@ -22,7 +22,7 @@ from .conversation import ConversationManager
 from .extractor import InformationExtractor
 from .memory import Memory
 from .models import AskuraConfig, AskuraResponse, AskuraState, MessageRoutingDecision
-from .prompts import get_conversation_analysis_prompt
+from .prompts import get_conversation_analysis_prompts
 from .reflection import Reflection
 from .summarizer import Summarizer
 
@@ -309,8 +309,8 @@ class AskuraAgent(BaseConversationAgent):
             conversation_context = state.conversation_context.to_dict() if state.conversation_context else {}
             extracted_info = state.extracted_info or {}
 
-            # Get the routing evaluation prompt
-            prompt = get_conversation_analysis_prompt(
+            # Get the routing evaluation prompts
+            system_prompt, user_prompt = get_conversation_analysis_prompts(
                 "message_routing",
                 conversation_purpose=state.conversation_context.conversation_purpose,
                 user_message=last_user_message,
@@ -320,7 +320,10 @@ class AskuraAgent(BaseConversationAgent):
 
             # Use LLM to make routing decision
             routing_decision = self.llm.structured_completion(
-                messages=[{"role": "user", "content": prompt}],
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
                 response_model=MessageRoutingDecision,
                 temperature=0.2,
                 max_tokens=300,
