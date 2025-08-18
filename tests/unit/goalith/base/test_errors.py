@@ -3,12 +3,7 @@ Unit tests for goalith.base.errors module.
 """
 import pytest
 
-from cogents.goalith.base.errors import (
-    DecompositionError,
-    CycleDetectedError,
-    NodeNotFoundError,
-    SchedulingError,
-)
+from cogents.goalith.base.errors import CycleDetectedError, DecompositionError, NodeNotFoundError, SchedulingError
 
 
 class TestGoalithErrors:

@@ -2,16 +2,13 @@
 Shared fixtures for goalith tests.
 """
 import pytest
-from datetime import datetime, timezone
-from typing import Dict, Any
-from uuid import uuid4
 
-from cogents.goalith.base.goal_node import GoalNode, NodeType, NodeStatus
+from cogents.goalith.base.goal_node import GoalNode, NodeStatus, NodeType
 from cogents.goalith.base.graph_store import GraphStore
 from cogents.goalith.base.update_event import UpdateEvent, UpdateType
-from cogents.goalith.memory.inmemstore import InMemoryStore
 from cogents.goalith.decomposer.registry import DecomposerRegistry
 from cogents.goalith.decomposer.simple_decomposer import SimpleListDecomposer
+from cogents.goalith.memory.inmemstore import InMemoryStore
 
 
 @pytest.fixture
@@ -24,7 +21,7 @@ def sample_goal_node():
         status=NodeStatus.PENDING,
         priority=5.0,
         tags=["test", "sample"],
-        metadata={"test": True}
+        context={"test": True},
     )
 
 
@@ -38,7 +35,7 @@ def sample_task_node():
         status=NodeStatus.PENDING,
         priority=3.0,
         tags=["test", "task"],
-        metadata={"complexity": "low"}
+        context={"complexity": "low"},
     )
 
 
@@ -52,7 +49,7 @@ def sample_subgoal_node():
         status=NodeStatus.IN_PROGRESS,
         priority=4.0,
         dependencies={"test-task-1"},
-        tags=["test", "subgoal"]
+        tags=["test", "subgoal"],
     )
 
 
@@ -69,11 +66,11 @@ def populated_graph_store(sample_goal_node, sample_subgoal_node, sample_task_nod
     store.add_node(sample_goal_node)
     store.add_node(sample_subgoal_node)
     store.add_node(sample_task_node)
-    
+
     # Add some dependencies
     store.add_dependency(sample_subgoal_node.id, sample_task_node.id)
     store.add_dependency(sample_goal_node.id, sample_subgoal_node.id)
-    
+
     return store
 
 
@@ -85,7 +82,7 @@ def sample_update_event():
         update_type=UpdateType.STATUS_CHANGE,
         node_id="test-node-1",
         data={"old_status": "pending", "new_status": "in_progress"},
-        source="test"
+        source="test",
     )
 
 
@@ -110,5 +107,5 @@ def mock_context():
         "domain": "test",
         "user_preferences": {"priority_style": "deadline"},
         "historical_patterns": [],
-        "current_workload": 3
+        "current_workload": 3,
     }
