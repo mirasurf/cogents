@@ -9,7 +9,7 @@ collect required information through natural conversation flow.
 from .askura_agent import AskuraAgent
 from .conversation import ConversationManager
 from .extractor import InformationExtractor
-from .models import AskuraConfig, AskuraResponse, AskuraState
+from .models import AskuraConfig, AskuraResponse, AskuraState, InformationSlot
 
 __all__ = [
     "AskuraAgent",
@@ -18,4 +18,5 @@ __all__ = [
     "AskuraResponse",
     "ConversationManager",
     "InformationExtractor",
+    "InformationSlot",
 ]
