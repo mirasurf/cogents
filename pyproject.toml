@@ -56,7 +56,7 @@ colorlog = "^6.8.0"
 # Type hints
 typing-extensions = "^4.8.0"
 deprecated = "^1.2.18"
-pygraphviz = "^1.14"
+# pygraphviz = "^1.14"  # Temporarily disabled due to missing system dependencies
 networkx = "^3.5"
 
 [tool.poetry.group.dev.dependencies]
@@ -70,7 +70,7 @@ build = "^1.2.0"
 flake8 = "^6.0.0"
 psycopg2-binary = "^2.9.0"
 autoflake = "^2.3.1"
-pygraphviz = "^1.14"
+# pygraphviz = "^1.14"  # Temporarily disabled due to missing system dependencies
 huggingface-hub = "^0.34.4"
 
 [tool.poetry.urls]

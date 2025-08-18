@@ -59,10 +59,7 @@ class ConversationManager:
 
             # Use structured completion with retry for reliable analysis
             context = self.llm.structured_completion(
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
+                messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
                 response_model=ConversationContext,
                 temperature=0.3,
                 max_tokens=500,
@@ -113,10 +110,7 @@ class ConversationManager:
             known_slots=str(state.extracted_info) if state.extracted_info else "Nothing specific collected yet",
         )
         utterance = self.llm.completion(
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ],
+            messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
             temperature=0.7,
             max_tokens=200,
         )

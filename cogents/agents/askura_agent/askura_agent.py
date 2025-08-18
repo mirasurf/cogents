@@ -320,10 +320,7 @@ class AskuraAgent(BaseConversationAgent):
 
             # Use LLM to make routing decision
             routing_decision = self.llm.structured_completion(
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
+                messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
                 response_model=MessageRoutingDecision,
                 temperature=0.2,
                 max_tokens=300,
