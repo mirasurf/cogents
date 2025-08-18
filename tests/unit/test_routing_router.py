@@ -62,9 +62,13 @@ class TestModelRouter:
     def test_init_with_strategy_instance(self, mock_llm_client):
         """Test ModelRouter initialization with strategy instance."""
         strategy = MockStrategy(lite_client=mock_llm_client)
-        router = ModelRouter(strategy=strategy)
 
-        assert router.strategy == strategy
+        with patch("cogents.common.routing.router.get_llm_client") as mock_get_client:
+            mock_get_client.side_effect = Exception("Should not be called")
+
+            router = ModelRouter(strategy=strategy)
+
+            assert router.strategy == strategy
 
     def test_init_with_lite_client(self, mock_llm_client):
         """Test ModelRouter initialization with pre-configured lite client."""
@@ -95,8 +99,11 @@ class TestModelRouter:
 
     def test_init_invalid_strategy_name(self):
         """Test ModelRouter initialization with invalid strategy name."""
-        with pytest.raises(ValueError, match="Unknown strategy"):
-            ModelRouter(strategy="nonexistent_strategy")
+        with patch("cogents.common.routing.router.get_llm_client") as mock_get_client:
+            mock_get_client.side_effect = Exception("Should not be called")
+
+            with pytest.raises(ValueError, match="Unknown strategy"):
+                ModelRouter(strategy="nonexistent_strategy")
 
     def test_lite_client_setup_fallback_llamacpp(self):
         """Test lite client setup with llamacpp fallback."""
@@ -136,47 +143,63 @@ class TestModelRouter:
     def test_route_success(self):
         """Test successful routing."""
         strategy = MockStrategy(return_tier=ModelTier.POWER)
-        router = ModelRouter(strategy=strategy)
 
-        result = router.route("Complex analysis task")
+        with patch("cogents.common.routing.router.get_llm_client") as mock_get_client:
+            mock_get_client.side_effect = Exception("Should not be called")
 
-        assert isinstance(result, RoutingResult)
-        assert result.tier == ModelTier.POWER
-        assert result.confidence == 0.8
-        assert result.strategy == "mock_strategy"
+            router = ModelRouter(strategy=strategy)
+
+            result = router.route("Complex analysis task")
+
+            assert isinstance(result, RoutingResult)
+            assert result.tier == ModelTier.POWER
+            assert result.confidence == 0.8
+            assert result.strategy == "mock_strategy"
 
     def test_route_empty_query(self):
         """Test routing with empty query."""
         strategy = MockStrategy()
-        router = ModelRouter(strategy=strategy)
 
-        result = router.route("")
+        with patch("cogents.common.routing.router.get_llm_client") as mock_get_client:
+            mock_get_client.side_effect = Exception("Should not be called")
 
-        # Should default to LITE tier for empty queries
-        assert result.tier == ModelTier.LITE
-        assert result.confidence == 0.5
-        assert result.metadata["empty_query"] is True
+            router = ModelRouter(strategy=strategy)
+
+            result = router.route("")
+
+            # Should default to LITE tier for empty queries
+            assert result.tier == ModelTier.LITE
+            assert result.confidence == 0.5
+            assert result.metadata["empty_query"] is True
 
     def test_route_whitespace_query(self):
         """Test routing with whitespace-only query."""
         strategy = MockStrategy()
-        router = ModelRouter(strategy=strategy)
 
-        result = router.route("   \n\t   ")
+        with patch("cogents.common.routing.router.get_llm_client") as mock_get_client:
+            mock_get_client.side_effect = Exception("Should not be called")
 
-        # Should default to LITE tier for empty queries
-        assert result.tier == ModelTier.LITE
+            router = ModelRouter(strategy=strategy)
+
+            result = router.route("   \n\t   ")
+
+            # Should default to LITE tier for empty queries
+            assert result.tier == ModelTier.LITE
 
     def test_route_strips_whitespace(self):
         """Test that route strips whitespace from query."""
         strategy = MockStrategy(return_tier=ModelTier.FAST)
-        router = ModelRouter(strategy=strategy)
 
-        result = router.route("  test query  ")
+        with patch("cogents.common.routing.router.get_llm_client") as mock_get_client:
+            mock_get_client.side_effect = Exception("Should not be called")
 
-        # Should process the query (not treat as empty)
-        assert result.tier == ModelTier.FAST
-        assert "empty_query" not in result.metadata
+            router = ModelRouter(strategy=strategy)
+
+            result = router.route("  test query  ")
+
+            # Should process the query (not treat as empty)
+            assert result.tier == ModelTier.FAST
+            assert "empty_query" not in result.metadata
 
     @patch("cogents.common.logging.get_logger")
     def test_route_strategy_exception(self, mock_logger):
@@ -190,86 +213,102 @@ class TestModelRouter:
             def get_strategy_name(self) -> str:
                 return "error_strategy"
 
-        router = ModelRouter(strategy=ErrorStrategy())
+        with patch("cogents.common.routing.router.get_llm_client") as mock_get_client:
+            mock_get_client.side_effect = Exception("Should not be called")
 
-        result = router.route("test query")
+            router = ModelRouter(strategy=ErrorStrategy())
 
-        # Should fallback to FAST tier
-        assert result.tier == ModelTier.FAST
-        assert result.confidence == 0.0
-        assert result.metadata["fallback"] is True
-        assert "error" in result.metadata
+            result = router.route("test query")
+
+            # Should fallback to FAST tier
+            assert result.tier == ModelTier.FAST
+            assert result.confidence == 0.0
+            assert result.metadata["fallback"] is True
+            assert "error" in result.metadata
 
     def test_get_recommended_model_params_default(self):
         """Test getting default model parameters."""
-        router = ModelRouter(strategy=MockStrategy())
-        result = RoutingResult(
-            tier=ModelTier.FAST, confidence=0.8, complexity_score=ComplexityScore(total=0.5), strategy="test"
-        )
+        with patch("cogents.common.routing.router.get_llm_client") as mock_get_client:
+            mock_get_client.side_effect = Exception("Should not be called")
 
-        params = router.get_recommended_model_params(result)
+            router = ModelRouter(strategy=MockStrategy())
+            result = RoutingResult(
+                tier=ModelTier.FAST, confidence=0.8, complexity_score=ComplexityScore(total=0.5), strategy="test"
+            )
 
-        expected = {
-            "provider": "openai",
-            "chat_model": "gpt-4o-mini",
-            "temperature": 0.7,
-            "max_tokens": 1024,
-        }
-        assert params == expected
+            params = router.get_recommended_model_params(result)
+
+            expected = {
+                "provider": "openai",
+                "chat_model": "gpt-4o-mini",
+                "temperature": 0.7,
+                "max_tokens": 1024,
+            }
+            assert params == expected
 
     def test_get_recommended_model_params_all_tiers(self):
         """Test getting model parameters for all tiers."""
-        router = ModelRouter(strategy=MockStrategy())
+        with patch("cogents.common.routing.router.get_llm_client") as mock_get_client:
+            mock_get_client.side_effect = Exception("Should not be called")
 
-        # Test LITE tier
-        result_lite = RoutingResult(
-            tier=ModelTier.LITE, confidence=0.8, complexity_score=ComplexityScore(total=0.2), strategy="test"
-        )
-        params_lite = router.get_recommended_model_params(result_lite)
-        assert params_lite["provider"] == "llamacpp"
+            router = ModelRouter(strategy=MockStrategy())
 
-        # Test FAST tier
-        result_fast = RoutingResult(
-            tier=ModelTier.FAST, confidence=0.8, complexity_score=ComplexityScore(total=0.5), strategy="test"
-        )
-        params_fast = router.get_recommended_model_params(result_fast)
-        assert params_fast["chat_model"] == "gpt-4o-mini"
+            # Test LITE tier
+            result_lite = RoutingResult(
+                tier=ModelTier.LITE, confidence=0.8, complexity_score=ComplexityScore(total=0.2), strategy="test"
+            )
+            params_lite = router.get_recommended_model_params(result_lite)
+            assert params_lite["provider"] == "llamacpp"
 
-        # Test POWER tier
-        result_power = RoutingResult(
-            tier=ModelTier.POWER, confidence=0.8, complexity_score=ComplexityScore(total=0.8), strategy="test"
-        )
-        params_power = router.get_recommended_model_params(result_power)
-        assert params_power["chat_model"] == "gpt-4o"
+            # Test FAST tier
+            result_fast = RoutingResult(
+                tier=ModelTier.FAST, confidence=0.8, complexity_score=ComplexityScore(total=0.5), strategy="test"
+            )
+            params_fast = router.get_recommended_model_params(result_fast)
+            assert params_fast["chat_model"] == "gpt-4o-mini"
+
+            # Test POWER tier
+            result_power = RoutingResult(
+                tier=ModelTier.POWER, confidence=0.8, complexity_score=ComplexityScore(total=0.8), strategy="test"
+            )
+            params_power = router.get_recommended_model_params(result_power)
+            assert params_power["chat_model"] == "gpt-4o"
 
     def test_get_recommended_model_params_custom_configs(self):
         """Test getting model parameters with custom configs."""
-        router = ModelRouter(strategy=MockStrategy())
+        with patch("cogents.common.routing.router.get_llm_client") as mock_get_client:
+            mock_get_client.side_effect = Exception("Should not be called")
 
-        custom_configs = {
-            ModelTier.LITE: {"provider": "custom", "model": "lite-model"},
-            ModelTier.FAST: {"provider": "custom", "model": "fast-model"},
-        }
+            router = ModelRouter(strategy=MockStrategy())
 
-        result = RoutingResult(
-            tier=ModelTier.LITE, confidence=0.8, complexity_score=ComplexityScore(total=0.2), strategy="test"
-        )
+            custom_configs = {
+                ModelTier.LITE: {"provider": "custom", "model": "lite-model"},
+                ModelTier.FAST: {"provider": "custom", "model": "fast-model"},
+            }
 
-        params = router.get_recommended_model_params(result, custom_configs)
+            result = RoutingResult(
+                tier=ModelTier.LITE, confidence=0.8, complexity_score=ComplexityScore(total=0.2), strategy="test"
+            )
 
-        assert params == {"provider": "custom", "model": "lite-model"}
+            params = router.get_recommended_model_params(result, custom_configs)
+
+            assert params == {"provider": "custom", "model": "lite-model"}
 
     def test_route_and_configure(self):
         """Test route_and_configure method."""
         strategy = MockStrategy(return_tier=ModelTier.POWER)
-        router = ModelRouter(strategy=strategy)
 
-        result, config = router.route_and_configure("Complex task")
+        with patch("cogents.common.routing.router.get_llm_client") as mock_get_client:
+            mock_get_client.side_effect = Exception("Should not be called")
 
-        assert isinstance(result, RoutingResult)
-        assert result.tier == ModelTier.POWER
-        assert isinstance(config, dict)
-        assert config["chat_model"] == "gpt-4o"  # POWER tier default
+            router = ModelRouter(strategy=strategy)
+
+            result, config = router.route_and_configure("Complex task")
+
+            assert isinstance(result, RoutingResult)
+            assert result.tier == ModelTier.POWER
+            assert isinstance(config, dict)
+            assert config["chat_model"] == "gpt-4o"  # POWER tier default
 
     def test_update_strategy_config(self, mock_llm_client):
         """Test updating strategy configuration."""

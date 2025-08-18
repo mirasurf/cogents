@@ -55,11 +55,11 @@ class TestGoalNode:
     def test_default_creation(self):
         """Test creating a GoalNode with minimal parameters."""
         node = GoalNode(description="Test goal")
-        
+
         # Check that ID is generated
         assert node.id is not None
         assert isinstance(UUID(node.id), UUID)  # Valid UUID format
-        
+
         # Check defaults
         assert node.description == "Test goal"
         assert node.type == NodeType.TASK  # Default type
@@ -109,7 +109,7 @@ class TestGoalNode:
             assigned_to="user123",
             created_at=created_at,
         )
-        
+
         assert node.id == custom_id
         assert node.description == "Custom test goal"
         assert node.type == NodeType.GOAL
@@ -136,16 +136,16 @@ class TestGoalNode:
         """Test is_ready with non-pending status."""
         node = GoalNode(description="Test", status=NodeStatus.COMPLETED)
         assert node.is_ready() is False
-        
+
         node.status = NodeStatus.IN_PROGRESS
         assert node.is_ready() is False
-        
+
         node.status = NodeStatus.FAILED
         assert node.is_ready() is False
-        
+
         node.status = NodeStatus.CANCELLED
         assert node.is_ready() is False
-        
+
         node.status = NodeStatus.BLOCKED
         assert node.is_ready() is False
 
@@ -177,13 +177,13 @@ class TestGoalNode:
         """Test status update methods."""
         node = GoalNode(description="Test", status=NodeStatus.PENDING)
         old_updated_at = node.updated_at
-        
+
         # Mark started (to in_progress)
         node.mark_started()
         assert node.status == NodeStatus.IN_PROGRESS
         assert node.started_at is not None
         assert node.updated_at > old_updated_at
-        
+
         # Mark completed
         old_updated_at = node.updated_at
         node.mark_completed()
@@ -195,7 +195,7 @@ class TestGoalNode:
         """Test mark_failed method."""
         node = GoalNode(description="Test", status=NodeStatus.IN_PROGRESS)
         old_retry_count = node.retry_count
-        
+
         node.mark_failed("Test error")
         assert node.status == NodeStatus.FAILED
         assert node.error_message == "Test error"
@@ -204,7 +204,7 @@ class TestGoalNode:
     def test_mark_cancelled_method(self):
         """Test mark_cancelled method."""
         node = GoalNode(description="Test", status=NodeStatus.IN_PROGRESS)
-        
+
         node.mark_cancelled()
         assert node.status == NodeStatus.CANCELLED
 
@@ -280,9 +280,9 @@ class TestGoalNode:
         node = GoalNode(
             description="Test",
             dependencies={"dep1", "dep2"},  # Set
-            tags=["tag1", "tag2", "tag1"]  # List with duplicate
+            tags=["tag1", "tag2", "tag1"],  # List with duplicate
         )
-        
+
         # Dependencies are sets, tags are lists
         assert node.dependencies == {"dep1", "dep2"}
         assert node.tags == ["tag1", "tag2", "tag1"]  # Duplicates preserved in list
@@ -290,27 +290,27 @@ class TestGoalNode:
     def test_add_remove_dependencies(self):
         """Test add/remove dependency methods."""
         node = GoalNode(description="Test")
-        
+
         node.add_dependency("dep1")
         assert "dep1" in node.dependencies
-        
+
         node.remove_dependency("dep1")
         assert "dep1" not in node.dependencies
 
     def test_add_remove_children(self):
         """Test add/remove child methods."""
         node = GoalNode(description="Test")
-        
+
         node.add_child("child1")
         assert "child1" in node.children
-        
+
         node.remove_child("child1")
         assert "child1" not in node.children
 
     def test_add_note_method(self):
         """Test add_note method."""
         node = GoalNode(description="Test")
-        
+
         node.add_note("Test note")
         assert len(node.execution_notes) == 1
         assert "Test note" in node.execution_notes[0]
@@ -318,7 +318,7 @@ class TestGoalNode:
     def test_update_context_method(self):
         """Test update_context method."""
         node = GoalNode(description="Test")
-        
+
         node.update_context("key1", "value1")
         assert node.context["key1"] == "value1"
 
@@ -326,9 +326,9 @@ class TestGoalNode:
         """Test can_retry method."""
         node = GoalNode(description="Test", status=NodeStatus.FAILED, retry_count=1, max_retries=3)
         assert node.can_retry() is True
-        
+
         node.retry_count = 3
         assert node.can_retry() is False
-        
+
         node.status = NodeStatus.COMPLETED
         assert node.can_retry() is False

@@ -25,9 +25,9 @@ class TestDecomposerRegistry:
     def test_register_decomposer(self):
         """Test registering a decomposer."""
         registry = DecomposerRegistry()
-        decomposer = SimpleListDecomposer()
+        decomposer = SimpleListDecomposer(["task1", "task2"])
 
-        registry.register("simple", decomposer)
+        registry.register(decomposer)
 
         assert "simple" in registry._decomposers
         assert registry._decomposers["simple"] is decomposer
@@ -37,19 +37,19 @@ class TestDecomposerRegistry:
         """Test that registering with duplicate name replaces existing."""
         registry = DecomposerRegistry()
 
-        decomposer1 = SimpleListDecomposer()
-        decomposer2 = SimpleListDecomposer()
+        decomposer1 = SimpleListDecomposer(["task1", "task2"])
+        decomposer2 = SimpleListDecomposer(["task3", "task4"])
 
-        registry.register("test", decomposer1)
-        assert registry._decomposers["test"] is decomposer1
+        registry.register(decomposer1)
+        assert registry._decomposers["simple_list"] is decomposer1
 
-        registry.register("test", decomposer2)
-        assert registry._decomposers["test"] is decomposer2
+        registry.register(decomposer2)
+        assert registry._decomposers["simple_list"] is decomposer2
 
     def test_get_decomposer(self):
         """Test getting a registered decomposer."""
         registry = DecomposerRegistry()
-        decomposer = SimpleListDecomposer()
+        decomposer = SimpleListDecomposer(["task1", "task2"])
 
         registry.register("test", decomposer)
 
@@ -66,7 +66,7 @@ class TestDecomposerRegistry:
     def test_has_decomposer(self):
         """Test checking if decomposer exists."""
         registry = DecomposerRegistry()
-        decomposer = SimpleListDecomposer()
+        decomposer = SimpleListDecomposer(["task1", "task2"])
 
         assert registry.has_decomposer("test") is False
 
@@ -76,7 +76,7 @@ class TestDecomposerRegistry:
     def test_unregister_decomposer(self):
         """Test unregistering a decomposer."""
         registry = DecomposerRegistry()
-        decomposer = SimpleListDecomposer()
+        decomposer = SimpleListDecomposer(["task1", "task2"])
 
         registry.register("test", decomposer)
         assert registry.has_decomposer("test")
@@ -100,8 +100,8 @@ class TestDecomposerRegistry:
         assert registry.list_decomposers() == []
 
         # Add some decomposers
-        decomposer1 = SimpleListDecomposer()
-        decomposer2 = SimpleListDecomposer()
+        decomposer1 = SimpleListDecomposer(["task1", "task2"])
+        decomposer2 = SimpleListDecomposer(["task3", "task4"])
 
         registry.register("first", decomposer1)
         registry.register("second", decomposer2)
@@ -161,7 +161,7 @@ class TestDecomposerRegistry:
         registry = DecomposerRegistry()
 
         # Create a decomposer with some metadata
-        decomposer = SimpleListDecomposer()
+        decomposer = SimpleListDecomposer(["task1", "task2"])
         registry.register("test", decomposer)
 
         info = registry.get_decomposer_info("test")
@@ -183,7 +183,7 @@ class TestDecomposerRegistry:
         registry = DecomposerRegistry()
 
         # Create different types of decomposers
-        simple_decomposer = SimpleListDecomposer()
+        simple_decomposer = SimpleListDecomposer(["task1", "task2"])
 
         # Mock other types
         mock_llm_decomposer = Mock(spec=GoalDecomposer)
@@ -208,8 +208,8 @@ class TestDecomposerRegistry:
         registry = DecomposerRegistry()
 
         # Add some decomposers
-        registry.register("first", SimpleListDecomposer())
-        registry.register("second", SimpleListDecomposer())
+        registry.register("first", SimpleListDecomposer(["task1", "task2"]))
+        registry.register("second", SimpleListDecomposer(["task3", "task4"]))
 
         assert len(registry.list_decomposers()) == 2
 
@@ -225,11 +225,11 @@ class TestDecomposerRegistry:
         registry = DecomposerRegistry()
 
         # Register permanent decomposer
-        permanent = SimpleListDecomposer()
+        permanent = SimpleListDecomposer(["task1", "task2"])
         registry.register("permanent", permanent)
 
         # Use context manager for temporary decomposer
-        temporary = SimpleListDecomposer()
+        temporary = SimpleListDecomposer(["task3", "task4"])
 
         with registry.temporary_decomposer("temp", temporary):
             # Both should be available
@@ -272,9 +272,9 @@ class TestDecomposerRegistry:
         registry = DecomposerRegistry()
 
         decomposers = {
-            "simple1": SimpleListDecomposer(),
-            "simple2": SimpleListDecomposer(),
-            "simple3": SimpleListDecomposer(),
+            "simple1": SimpleListDecomposer(["task1", "task2"]),
+            "simple2": SimpleListDecomposer(["task3", "task4"]),
+            "simple3": SimpleListDecomposer(["task5", "task6"]),
         }
 
         # Bulk register
@@ -290,8 +290,8 @@ class TestDecomposerRegistry:
         registry = DecomposerRegistry()
 
         # Add decomposers
-        registry.register("decomposer1", SimpleListDecomposer())
-        registry.register("decomposer2", SimpleListDecomposer())
+        registry.register("decomposer1", SimpleListDecomposer(["task1", "task2"]))
+        registry.register("decomposer2", SimpleListDecomposer(["task3", "task4"]))
 
         # Use them
         goal = GoalNode(description="Test")
@@ -314,7 +314,7 @@ class TestDecomposerRegistry:
         registry = DecomposerRegistry()
 
         # Valid decomposer
-        valid_decomposer = SimpleListDecomposer()
+        valid_decomposer = SimpleListDecomposer(["task1", "task2"])
         registry.register("valid", valid_decomposer)  # Should not raise
 
         # Invalid decomposer (not implementing interface)
@@ -331,7 +331,7 @@ class TestDecomposerRegistry:
         def register_decomposer(name_prefix, count):
             try:
                 for i in range(count):
-                    decomposer = SimpleListDecomposer()
+                    decomposer = SimpleListDecomposer([f"task{i}"])
                     registry.register(f"{name_prefix}_{i}", decomposer)
             except Exception as e:
                 errors.append(e)
@@ -346,7 +346,7 @@ class TestDecomposerRegistry:
 
         # Register some initial decomposers
         for i in range(5):
-            registry.register(f"initial_{i}", SimpleListDecomposer())
+            registry.register(f"initial_{i}", SimpleListDecomposer([f"task{i}"]))
 
         # Create threads for concurrent access
         threads = []

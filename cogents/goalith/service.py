@@ -11,7 +11,7 @@ from queue import Empty, Queue
 from typing import Any, Dict, List, Optional, Set
 
 from .base.conflict import Conflict, ConflictResolver
-from .base.errors import NodeNotFoundError
+from .base.errors import DecompositionError, NodeNotFoundError
 from .base.goal_node import GoalNode, NodeStatus, NodeType
 from .base.graph_store import GraphStore
 from .base.memory import MemoryInterface
@@ -239,7 +239,7 @@ class GoalithService:
         goal_id: str,
         decomposer_name: str = "llm_decomposer",
         context: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, List[str]]:
+    ) -> List[str]:
         """
         Decompose a goal into subgoals or tasks.
 
@@ -249,11 +249,15 @@ class GoalithService:
             context: Additional context for decomposition
 
         Returns:
-            Dictionary containing list of subgoal IDs or error information
+            List of subgoal IDs
+
+        Raises:
+            NodeNotFoundError: If the goal is not found
+            DecompositionError: If decomposition fails
         """
         # Check if goal exists
         if not self._graph_store.has_node(goal_id):
-            return {"error": f"Goal {goal_id} not found"}
+            raise NodeNotFoundError(f"Goal {goal_id} not found")
 
         try:
             goal = self._graph_store.get_node(goal_id)
@@ -261,7 +265,7 @@ class GoalithService:
             # Perform decomposition
             subgoals = self._decomposer_registry.decompose(decomposer_name, goal, context)
         except (KeyError, Exception) as e:
-            return {"error": str(e)}
+            raise DecompositionError(f"Decomposition failed: {str(e)}") from e
 
         # Add subgoals to graph
         subgoal_ids = []
@@ -290,7 +294,7 @@ class GoalithService:
         self._graph_store.update_node(goal)
 
         self._stats["decompositions"] += 1
-        return {"subgoal_ids": subgoal_ids}
+        return subgoal_ids
 
     def get_next_task(self, criteria: Optional[Dict[str, Any]] = None) -> Optional[GoalNode]:
         """
