@@ -108,7 +108,7 @@ def example_basic_llm_decomposition():
 
     # Decompose using the default LLM decomposer
     try:
-        subgoal_ids = goalith.decompose_goal(
+        result = goalith.decompose_goal(
             goal_id,
             "llm_decomposer",  # Use the LLM decomposer
             context={
@@ -118,6 +118,12 @@ def example_basic_llm_decomposition():
             },
         )
 
+        # Check for errors in the result
+        if "error" in result:
+            print(f"❌ Decomposition failed: {result['error']}")
+            return
+
+        subgoal_ids = result.get("subgoal_ids", [])
         print(f"✅ Decomposed into {len(subgoal_ids)} subgoals")
 
         # Display the decomposition results
@@ -201,7 +207,7 @@ def example_contextual_llm_decomposition():
 
     try:
         # Decompose using the contextual decomposer
-        subgoal_ids = goalith.decompose_goal(
+        result = goalith.decompose_goal(
             goal_id,
             context={
                 "sprint_duration": "2 weeks",
@@ -213,6 +219,12 @@ def example_contextual_llm_decomposition():
             },
         )
 
+        # Check for errors in the result
+        if "error" in result:
+            print(f"❌ Contextual decomposition failed: {result['error']}")
+            return
+
+        subgoal_ids = result.get("subgoal_ids", [])
         print(f"✅ Contextual decomposition created {len(subgoal_ids)} subgoals")
 
         # Display results with enhanced context
@@ -248,7 +260,7 @@ def main():
         print("   Set your API key: export OPENROUTER_API_KEY='your-key-here'")
 
     try:
-        # example_basic_llm_decomposition()
+        example_basic_llm_decomposition()
         example_contextual_llm_decomposition()
 
         print("\n✅ All examples completed successfully!")

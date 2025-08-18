@@ -106,10 +106,18 @@ Recent messages: {recent_messages}""",
 
 # Backward compatibility - combined prompts for legacy usage
 CONVERSATION_ANALYSIS_PROMPTS = {
-    "conversation_context": CONVERSATION_ANALYSIS_SYSTEM_PROMPTS["conversation_context"] + "\n\n" + CONVERSATION_ANALYSIS_USER_PROMPTS["conversation_context"],
-    "knowledge_gap_analysis": CONVERSATION_ANALYSIS_SYSTEM_PROMPTS["knowledge_gap_analysis"] + "\n\n" + CONVERSATION_ANALYSIS_USER_PROMPTS["knowledge_gap_analysis"],
-    "determine_next_action": CONVERSATION_ANALYSIS_SYSTEM_PROMPTS["determine_next_action"] + "\n\n" + CONVERSATION_ANALYSIS_USER_PROMPTS["determine_next_action"],
-    "message_routing": CONVERSATION_ANALYSIS_SYSTEM_PROMPTS["message_routing"] + "\n\n" + CONVERSATION_ANALYSIS_USER_PROMPTS["message_routing"],
+    "conversation_context": CONVERSATION_ANALYSIS_SYSTEM_PROMPTS["conversation_context"]
+    + "\n\n"
+    + CONVERSATION_ANALYSIS_USER_PROMPTS["conversation_context"],
+    "knowledge_gap_analysis": CONVERSATION_ANALYSIS_SYSTEM_PROMPTS["knowledge_gap_analysis"]
+    + "\n\n"
+    + CONVERSATION_ANALYSIS_USER_PROMPTS["knowledge_gap_analysis"],
+    "determine_next_action": CONVERSATION_ANALYSIS_SYSTEM_PROMPTS["determine_next_action"]
+    + "\n\n"
+    + CONVERSATION_ANALYSIS_USER_PROMPTS["determine_next_action"],
+    "message_routing": CONVERSATION_ANALYSIS_SYSTEM_PROMPTS["message_routing"]
+    + "\n\n"
+    + CONVERSATION_ANALYSIS_USER_PROMPTS["message_routing"],
 }
 
 
@@ -117,7 +125,7 @@ def get_conversation_analysis_prompts(analysis_type: str, **kwargs) -> tuple[str
     """Get separated system and user prompts for conversation analysis."""
     system_prompt = CONVERSATION_ANALYSIS_SYSTEM_PROMPTS.get(analysis_type, "")
     user_prompt_template = CONVERSATION_ANALYSIS_USER_PROMPTS.get(analysis_type, "")
-    
+
     try:
         user_prompt = user_prompt_template.format(**kwargs)
         return system_prompt, user_prompt

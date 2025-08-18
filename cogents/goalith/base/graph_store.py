@@ -447,15 +447,15 @@ class GraphStore:
         """Load the graph from a file."""
         self.load_from_file(filepath)
 
-    # Override methods to return expected format for tests
-    def get_dependencies(self, node_id: str) -> set:
+    # Test-compatible methods that return IDs instead of objects
+    def get_dependency_ids(self, node_id: str) -> set:
         """Get dependency IDs for a node (test-compatible version)."""
         if node_id not in self._nodes:
             raise NodeNotFoundError(f"Node {node_id} not found")
         node = self._nodes[node_id]
         return set(node.dependencies)
 
-    def get_children(self, node_id: str) -> set:
+    def get_child_ids(self, node_id: str) -> set:
         """Get child IDs for a node (test-compatible version)."""
         if node_id not in self._nodes:
             raise NodeNotFoundError(f"Node {node_id} not found")

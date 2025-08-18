@@ -109,10 +109,7 @@ class Reflection:
 
             # Use structured completion for reliable analysis
             analysis: KnowledgeGapAnalysis = self.llm.structured_completion(
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
+                messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
                 response_model=KnowledgeGapAnalysis,
                 temperature=0.3,
                 max_tokens=800,
@@ -167,10 +164,7 @@ class Reflection:
 
             # Use structured completion with retry for reliable unified analysis
             result: NextActionPlan = self.llm.structured_completion(
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
+                messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
                 response_model=NextActionPlan,
                 temperature=0.3,
                 max_tokens=300,
