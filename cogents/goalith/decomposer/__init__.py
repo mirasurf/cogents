@@ -8,8 +8,8 @@ from .simple_decomposer import SimpleListDecomposer
 default_registry = DecomposerRegistry()
 
 # Register built-in decomposers
-default_registry.register(HumanDecomposer())
-default_registry.register(LLMDecomposer())
+default_registry.register("human", HumanDecomposer())
+default_registry.register("llm", LLMDecomposer())
 
 __all__ = [
     "default_registry",

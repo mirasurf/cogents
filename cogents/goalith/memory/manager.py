@@ -52,7 +52,25 @@ class MemoryManager:
             Dictionary of enriched context
         """
         self._stats["enrichments"] += 1
-        enriched_context = {}
+        enriched_context = {
+            "node_id": node.id,  # Include node ID as tests expect
+            "description": node.description,
+            "type": node.type,
+        }
+
+        # Look for stored context for this specific node
+        node_context_keys = self._backend.list_keys(f"context:{node.id}:")
+        for key in node_context_keys:
+            parts = key.split(":", 2)
+            if len(parts) >= 3:
+                context_key = parts[2]  # Extract the context key part
+                context_value = self._backend.get(key)
+                if context_value is not None:
+                    # If the context value is a dict, flatten it into the enriched context
+                    if isinstance(context_value, dict):
+                        enriched_context.update(context_value)
+                    else:
+                        enriched_context[context_key] = context_value
 
         # Search for related context based on node description and tags
         search_terms = [node.description]
@@ -97,6 +115,93 @@ class MemoryManager:
         }
 
         return self._backend.store(full_key, context_value, metadata)
+
+    def store_context(self, node_id: str, context_key: str, context_value: Any) -> bool:
+        """
+        Store context for a node by ID.
+
+        Args:
+            node_id: The node ID
+            context_key: Key for the context
+            context_value: Context value
+
+        Returns:
+            True if successful, False otherwise
+        """
+        self._stats["context_stores"] += 1
+
+        full_key = f"context:{node_id}:{context_key}"
+        metadata = {
+            "node_id": node_id,
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+
+        return self._backend.store(full_key, context_value, metadata)
+
+    def get_context(self, node_id: str, context_key: str) -> Optional[Any]:
+        """
+        Get context for a node by ID.
+
+        Args:
+            node_id: The node ID
+            context_key: Key for the context
+
+        Returns:
+            Context value if found, None otherwise
+        """
+        self._stats["context_retrievals"] += 1
+
+        full_key = f"context:{node_id}:{context_key}"
+
+        # Check cache first
+        if self._is_cached(full_key):
+            self._stats["cache_hits"] += 1
+            return self._cache[full_key]
+
+        # Retrieve from backend
+        self._stats["cache_misses"] += 1
+        result = self._backend.get(full_key)
+
+        if result is not None:
+            self._cache_value(full_key, result)
+
+        return result
+
+    def store_execution_note(self, node_id: str, note: Dict[str, Any]) -> bool:
+        """
+        Store an execution note for a node.
+
+        Args:
+            node_id: The node ID
+            note: The execution note to store
+
+        Returns:
+            True if successful, False otherwise
+        """
+        self._stats["context_stores"] += 1
+
+        # Use the backend's store_execution_note method if available
+        if hasattr(self._backend, "store_execution_note"):
+            return self._backend.store_execution_note(node_id, note)
+
+        # Fallback to manual implementation
+        history_key = f"history:{node_id}"
+        existing_history = self._backend.retrieve(history_key) or []
+
+        # Ensure it's a list
+        if not isinstance(existing_history, list):
+            existing_history = [existing_history] if existing_history else []
+
+        # Add new note
+        existing_history.append(note)
+
+        # Store updated history
+        metadata = {
+            "node_id": node_id,
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+
+        return self._backend.store(history_key, existing_history, metadata)
 
     def get_node_context(self, node: GoalNode, context_key: str) -> Optional[Any]:
         """
@@ -276,6 +381,53 @@ class MemoryManager:
 
         return similar_nodes
 
+    def search_similar_goals(
+        self, node: GoalNode, filters: Optional[Dict[str, Any]] = None, limit: int = 10
+    ) -> List[Dict[str, Any]]:
+        """
+        Search for similar goals based on description and tags.
+
+        Args:
+            node: The node to find similar goals for
+            filters: Optional filters to apply
+            limit: Maximum number of results to return
+
+        Returns:
+            List of similar goal contexts
+        """
+        self._stats["searches"] += 1
+
+        search_terms = [node.description]
+        search_terms.extend(node.tags)
+
+        results = []
+        for term in search_terms:
+            if len(term) < 3:
+                continue
+
+            term_results = self._search_memory(term, limit=limit)
+            results.extend(term_results)
+
+        # Apply filters if provided
+        if filters:
+            filtered_results = []
+            for result in results:
+                if self._matches_filters(result, filters):
+                    filtered_results.append(result)
+            results = filtered_results
+
+        # Remove duplicates and limit results
+        seen = set()
+        unique_results = []
+        for result in results:
+            if result["key"] not in seen:
+                seen.add(result["key"])
+                unique_results.append(result)
+                if len(unique_results) >= limit:
+                    break
+
+        return unique_results
+
     def cleanup_old_data(self, max_age: timedelta = timedelta(days=30)) -> int:
         """
         Clean up old data from memory.
@@ -374,6 +526,11 @@ class MemoryManager:
         for key in expired_keys:
             self._cache.pop(key, None)
             self._cache_ttl.pop(key, None)
+
+    def clear_cache(self) -> None:
+        """Clear all cached data."""
+        self._cache.clear()
+        self._cache_ttl.clear()
 
     def get_memory_stats(self) -> Dict[str, Any]:
         """
@@ -599,3 +756,46 @@ class MemoryManager:
             stats["history_entries"] = 0
 
         return stats
+
+    def is_full(self) -> bool:
+        """
+        Check if the memory backend is full.
+
+        Returns:
+            True if the backend is full, False otherwise.
+        """
+        return self._backend.is_full()
+
+    def _matches_filters(self, result: Dict[str, Any], filters: Dict[str, Any]) -> bool:
+        """Check if a result matches the given filters."""
+        # Simple filter matching - could be enhanced
+        return True  # For now, accept all results
+
+    def get_performance_metrics(self, node_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get performance metrics for a node.
+
+        Args:
+            node_id: The node ID
+
+        Returns:
+            Performance metrics if found, None otherwise
+        """
+        return self.get_context(node_id, "performance")
+
+    def get_domain_context(self, node_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get domain-specific context for a node.
+
+        Args:
+            node_id: The node ID
+
+        Returns:
+            Domain context if found, None otherwise
+        """
+        return self.get_context(node_id, "domain")
+
+    def reset_stats(self) -> None:
+        """Reset all statistics to zero."""
+        for key in self._stats:
+            self._stats[key] = 0

@@ -3,7 +3,7 @@ Unit tests for goalith.update.update_queue module.
 """
 import threading
 import time
-from queue import Empty
+from queue import Empty, Full
 
 import pytest
 
@@ -48,12 +48,13 @@ class TestUpdateQueue:
         update1 = UpdateEvent(update_type=UpdateType.NODE_ADD, node_id="node1")
         queue.put(update1)
 
-        # Try to add another with timeout (should work for non-blocking)
+        # Try to add another with timeout (should raise Full when queue is full)
         update2 = UpdateEvent(update_type=UpdateType.NODE_ADD, node_id="node2")
-        queue.put(update2, timeout=0.1)
+        with pytest.raises(Full):
+            queue.put(update2, timeout=0.1)
 
-        # Should have 2 items (queue may auto-expand or block depending on implementation)
-        assert queue.size() >= 1
+        # Should still have 1 item
+        assert queue.size() == 1
 
     def test_get_update(self):
         """Test getting update from queue."""

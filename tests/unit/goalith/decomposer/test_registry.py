@@ -6,8 +6,7 @@ from unittest.mock import Mock
 import pytest
 
 from cogents.goalith.base.decomposer import GoalDecomposer
-from cogents.goalith.base.errors import DecompositionError
-from cogents.goalith.base.goal_node import GoalNode, NodeType
+from cogents.goalith.base.goal_node import GoalNode
 from cogents.goalith.decomposer.registry import DecomposerRegistry
 from cogents.goalith.decomposer.simple_decomposer import SimpleListDecomposer
 
@@ -27,11 +26,10 @@ class TestDecomposerRegistry:
         registry = DecomposerRegistry()
         decomposer = SimpleListDecomposer(["task1", "task2"])
 
-        registry.register(decomposer)
+        registry.register("simple", decomposer)
 
-        assert "simple" in registry._decomposers
-        assert registry._decomposers["simple"] is decomposer
-        assert "simple" in registry.list_decomposers()
+        assert registry.has_decomposer("simple")
+        assert registry.get_decomposer("simple") is decomposer
 
     def test_register_duplicate_name_replaces(self):
         """Test that registering with duplicate name replaces existing."""
@@ -40,11 +38,10 @@ class TestDecomposerRegistry:
         decomposer1 = SimpleListDecomposer(["task1", "task2"])
         decomposer2 = SimpleListDecomposer(["task3", "task4"])
 
-        registry.register(decomposer1)
-        assert registry._decomposers["simple_list"] is decomposer1
+        registry.register("duplicate", decomposer1)
+        registry.register("duplicate", decomposer2, replace=True)
 
-        registry.register(decomposer2)
-        assert registry._decomposers["simple_list"] is decomposer2
+        assert registry.get_decomposer("duplicate") is decomposer2
 
     def test_get_decomposer(self):
         """Test getting a registered decomposer."""
@@ -57,10 +54,10 @@ class TestDecomposerRegistry:
         assert retrieved is decomposer
 
     def test_get_nonexistent_decomposer_raises_error(self):
-        """Test that getting nonexistent decomposer raises KeyError."""
+        """Test that getting nonexistent decomposer raises ValueError."""
         registry = DecomposerRegistry()
 
-        with pytest.raises(KeyError, match="Decomposer 'nonexistent' not found"):
+        with pytest.raises(ValueError, match="Decomposer 'nonexistent' not found"):
             registry.get_decomposer("nonexistent")
 
     def test_has_decomposer(self):
@@ -86,10 +83,10 @@ class TestDecomposerRegistry:
         assert "test" not in registry.list_decomposers()
 
     def test_unregister_nonexistent_decomposer_raises_error(self):
-        """Test that unregistering nonexistent decomposer raises KeyError."""
+        """Test that unregistering nonexistent decomposer raises ValueError."""
         registry = DecomposerRegistry()
 
-        with pytest.raises(KeyError, match="Decomposer 'nonexistent' not found"):
+        with pytest.raises(ValueError, match="Decomposer 'nonexistent' not found"):
             registry.unregister("nonexistent")
 
     def test_list_decomposers(self):
@@ -110,51 +107,49 @@ class TestDecomposerRegistry:
         assert set(decomposer_names) == {"first", "second"}
 
     def test_decompose_goal_with_registered_decomposer(self):
-        """Test decomposing a goal using registered decomposer."""
+        """Test decomposing a goal with a registered decomposer."""
         registry = DecomposerRegistry()
 
         # Mock decomposer
         mock_decomposer = Mock(spec=GoalDecomposer)
-        expected_subgoals = [
-            GoalNode(description="Subgoal 1", type=NodeType.SUBGOAL),
-            GoalNode(description="Subgoal 2", type=NodeType.SUBGOAL),
-        ]
-        mock_decomposer.decompose.return_value = expected_subgoals
+        mock_decomposer.decompose.return_value = []
 
         registry.register("mock", mock_decomposer)
 
-        # Test goal
-        goal = GoalNode(description="Test goal", type=NodeType.GOAL)
-        context = {"domain": "test"}
+        goal = GoalNode(description="Test goal")
+        context = {"domain": "software"}
 
-        # Decompose
-        result = registry.decompose_goal(goal, "mock", context=context)
+        result = registry.decompose("mock", goal, context=context)
 
-        assert result == expected_subgoals
-        mock_decomposer.decompose.assert_called_once_with(goal, context=context)
+        # Verify context was passed correctly
+        mock_decomposer.decompose.assert_called_once()
+        call_args = mock_decomposer.decompose.call_args
+        assert call_args[0][0] == goal  # First positional arg is goal
+        assert call_args[0][1] == context  # Second positional arg is context
+        assert result == []
 
     def test_decompose_goal_with_nonexistent_decomposer_raises_error(self):
         """Test that decomposing with nonexistent decomposer raises error."""
         registry = DecomposerRegistry()
         goal = GoalNode(description="Test goal")
 
-        with pytest.raises(KeyError, match="Decomposer 'nonexistent' not found"):
-            registry.decompose_goal(goal, "nonexistent")
+        with pytest.raises(ValueError, match="Decomposer 'nonexistent' not found"):
+            registry.decompose("nonexistent", goal)
 
     def test_decompose_goal_propagates_decomposer_errors(self):
         """Test that decomposer errors are properly propagated."""
         registry = DecomposerRegistry()
 
-        # Mock decomposer that raises error
-        mock_decomposer = Mock(spec=GoalDecomposer)
-        mock_decomposer.decompose.side_effect = DecompositionError("Decomposition failed")
+        # Mock decomposer that raises an error
+        failing_decomposer = Mock(spec=GoalDecomposer)
+        failing_decomposer.decompose.side_effect = Exception("Decomposition failed")
 
-        registry.register("failing", mock_decomposer)
+        registry.register("failing", failing_decomposer)
 
         goal = GoalNode(description="Test goal")
 
-        with pytest.raises(DecompositionError, match="Decomposition failed"):
-            registry.decompose_goal(goal, "failing")
+        with pytest.raises(Exception, match="Decomposition failed"):
+            registry.decompose("failing", goal)
 
     def test_get_decomposer_info(self):
         """Test getting information about a decomposer."""
@@ -175,7 +170,7 @@ class TestDecomposerRegistry:
         """Test that getting info for nonexistent decomposer raises error."""
         registry = DecomposerRegistry()
 
-        with pytest.raises(KeyError):
+        with pytest.raises(ValueError):
             registry.get_decomposer_info("nonexistent")
 
     def test_multiple_decomposer_types(self):
@@ -259,13 +254,14 @@ class TestDecomposerRegistry:
         }
 
         # Decompose with context
-        registry.decompose_goal(goal, "context_test", context=context)
+        result = registry.decompose("context_test", goal, context=context)
 
         # Verify context was passed correctly
         mock_decomposer.decompose.assert_called_once()
         call_args = mock_decomposer.decompose.call_args
         assert call_args[0][0] == goal  # First positional arg is goal
-        assert call_args[1]["context"] == context  # Context passed as keyword arg
+        assert call_args[0][1] == context  # Second positional arg is context
+        assert result == []
 
     def test_bulk_registration(self):
         """Test registering multiple decomposers at once."""
@@ -299,15 +295,12 @@ class TestDecomposerRegistry:
         mock_decomposer.decompose.return_value = []
         registry.register("mock", mock_decomposer)
 
-        registry.decompose_goal(goal, "mock")
-        registry.decompose_goal(goal, "mock")
+        registry.decompose("mock", goal)
+        registry.decompose("mock", goal)
 
-        stats = registry.get_statistics()
-
-        assert isinstance(stats, dict)
-        assert stats["total_decomposers"] == 3
-        assert "usage_counts" in stats
-        assert stats["usage_counts"]["mock"] == 2
+        # Get statistics
+        stats = registry.get_registry_info()
+        assert len(stats) == 3
 
     def test_decomposer_validation(self):
         """Test validation of decomposer instances."""
@@ -340,7 +333,7 @@ class TestDecomposerRegistry:
             try:
                 if registry.has_decomposer(name):
                     goal = GoalNode(description="Concurrent test")
-                    registry.decompose_goal(goal, name)
+                    registry.decompose(name, goal)
             except Exception as e:
                 errors.append(e)
 

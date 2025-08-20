@@ -46,7 +46,7 @@ class TestMemoryManager:
         assert isinstance(context, dict)
         assert context.get("node_id") == sample_goal_node.id
         assert context.get("description") == sample_goal_node.description
-        assert context.get("type") == sample_goal_node.type.value
+        assert context.get("type") == sample_goal_node.type
         assert manager._stats["enrichments"] == 1
 
     def test_enrich_node_context_with_stored_data(self, sample_goal_node):
@@ -59,7 +59,7 @@ class TestMemoryManager:
             "execution_history": ["step1", "step2"],
             "performance_metrics": {"success_rate": 0.85},
         }
-        manager._backend.store_context(sample_goal_node.id, "enrichment", stored_context)
+        manager.store_context(sample_goal_node.id, "enrichment", stored_context)
 
         # Enrich the node
         context = manager.enrich_node_context(sample_goal_node)
@@ -119,7 +119,7 @@ class TestMemoryManager:
         manager.store_execution_note(sample_goal_node.id, note)
 
         # Verify note was stored
-        notes = manager._backend.get_execution_history(sample_goal_node.id)
+        notes = manager.get_execution_history(sample_goal_node.id)
         assert len(notes) == 1
         assert notes[0] == note
 
@@ -135,7 +135,7 @@ class TestMemoryManager:
         ]
 
         for note in notes:
-            manager._backend.store_execution_note(sample_goal_node.id, note)
+            manager.store_execution_note(sample_goal_node.id, note)
 
         # Retrieve history
         history = manager.get_execution_history(sample_goal_node.id)

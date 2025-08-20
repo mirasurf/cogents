@@ -10,6 +10,11 @@ from cogents.goalith.base.goal_node import GoalNode, NodeType
 class ConcreteDecomposer(GoalDecomposer):
     """Concrete implementation for testing abstract base class."""
 
+    @property
+    def name(self) -> str:
+        """Get the name of this decomposer."""
+        return "concrete_test_decomposer"
+
     def decompose(self, goal, context=None):
         """Simple decomposition that creates subgoals based on goal priority."""
         subgoals = []

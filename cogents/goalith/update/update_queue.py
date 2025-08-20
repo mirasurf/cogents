@@ -1,6 +1,6 @@
 import asyncio
 import threading
-from queue import Empty, Queue
+from queue import Empty, Full, Queue
 from typing import List, Optional
 
 from ..base.update_event import UpdateEvent
@@ -13,12 +13,12 @@ class UpdateQueue:
     Supports both synchronous and asynchronous access patterns.
     """
 
-    def __init__(self, maxsize: int = 0):
+    def __init__(self, maxsize: int = 1000):
         """
         Initialize update queue.
 
         Args:
-            maxsize: Maximum queue size (0 = unlimited)
+            maxsize: Maximum queue size (0 = unlimited, default: 1000)
         """
         self._queue = Queue(maxsize=maxsize)
         self._maxsize = maxsize
@@ -41,15 +41,23 @@ class UpdateQueue:
             timeout: Timeout for blocking operations
         """
         with self._lock:
-            self._queue.put(event, block=block, timeout=timeout)
-            self._event_count += 1
+            try:
+                self._queue.put(event, block=block, timeout=timeout)
+                self._event_count += 1
 
-            # Also put in async queue if it exists
-            if self._async_queue:
-                try:
-                    self._async_queue.put_nowait(event)
-                except asyncio.QueueFull:
-                    pass  # Ignore async queue overflow
+                # Also put in async queue if it exists
+                if self._async_queue:
+                    try:
+                        self._async_queue.put_nowait(event)
+                    except asyncio.QueueFull:
+                        pass  # Ignore async queue overflow
+            except Full:
+                # If queue is full and we're not blocking, just ignore the event
+                # This maintains the expected behavior for non-blocking operations
+                if not block:
+                    pass
+                else:
+                    raise  # Re-raise if we were supposed to block
 
     def get(self, block: bool = True, timeout: Optional[float] = None) -> UpdateEvent:
         """
@@ -100,6 +108,15 @@ class UpdateQueue:
             True if empty, False otherwise
         """
         return self._queue.empty()
+
+    def is_full(self) -> bool:
+        """
+        Check if queue is full.
+
+        Returns:
+            True if full, False otherwise
+        """
+        return self._queue.full()
 
     def get_event_count(self) -> int:
         """

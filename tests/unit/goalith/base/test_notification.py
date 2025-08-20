@@ -13,6 +13,11 @@ class ConcreteSubscriber(NotificationSubscriber):
     def __init__(self):
         self.received_events = []
 
+    @property
+    def subscriber_id(self) -> str:
+        """Get unique subscriber ID."""
+        return "concrete_test_subscriber"
+
     def notify(self, event):
         """Store received events for testing."""
         self.received_events.append(event)

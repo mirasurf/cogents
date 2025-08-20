@@ -172,6 +172,9 @@ class TestGraphStore:
         # Should not raise error, just do nothing
         store.remove_dependency(sample_goal_node.id, sample_task_node.id)
 
+        # Verify no dependency was created
+        assert sample_task_node.id not in sample_goal_node.dependencies
+
     def test_get_ready_nodes_no_dependencies(self):
         """Test getting ready nodes when no dependencies exist."""
         store = GraphStore()
@@ -213,51 +216,52 @@ class TestGraphStore:
         ready_ids = {node.id for node in ready_nodes}
 
         # Only node2 (depends on completed node3) and node4 (independent) should be ready
+        # node1 depends on node2, so it's not ready
         assert ready_ids == {"2", "4"}
 
     def test_get_children(self, populated_graph_store):
         """Test getting children of a node."""
         store = populated_graph_store
 
-        # Get children of the goal node
-        children = store.get_children("test-goal-1")
+        # Get children of the subgoal node (it should have the goal as a child)
+        children = store.get_children("test-subgoal-1")
         child_ids = {node.id for node in children}
 
-        assert "test-subgoal-1" in child_ids
+        assert "test-goal-1" in child_ids
 
     def test_get_parents(self, populated_graph_store):
         """Test getting parents of a node."""
         store = populated_graph_store
 
-        # Get parents of the task node
-        parents = store.get_parents("test-task-1")
+        # Get parents of the subgoal node (it should have the task as a parent)
+        parents = store.get_parents("test-subgoal-1")
         parent_ids = {node.id for node in parents}
 
-        assert "test-subgoal-1" in parent_ids
+        assert "test-task-1" in parent_ids
 
     def test_get_descendants(self, populated_graph_store):
         """Test getting all descendants of a node."""
         store = populated_graph_store
 
-        # Get all descendants of the goal node
-        descendants = store.get_descendants("test-goal-1")
-        descendant_ids = {node.id for node in descendants}
+        # Get all descendants of the task node (it should have subgoal and goal as descendants)
+        descendants = store.get_descendants("test-task-1")
+        descendant_ids = set(descendants)  # These are already strings
 
-        # Should include both subgoal and task
+        # Should include both subgoal and goal
         assert "test-subgoal-1" in descendant_ids
-        assert "test-task-1" in descendant_ids
+        assert "test-goal-1" in descendant_ids
 
     def test_get_ancestors(self, populated_graph_store):
         """Test getting all ancestors of a node."""
         store = populated_graph_store
 
-        # Get all ancestors of the task node
-        ancestors = store.get_ancestors("test-task-1")
-        ancestor_ids = {node.id for node in ancestors}
+        # Get all ancestors of the goal node (it should have subgoal and task as ancestors)
+        ancestors = store.get_ancestors("test-goal-1")
+        ancestor_ids = set(ancestors)  # These are already strings
 
-        # Should include both subgoal and goal
+        # Should include both subgoal and task
         assert "test-subgoal-1" in ancestor_ids
-        assert "test-goal-1" in ancestor_ids
+        assert "test-task-1" in ancestor_ids
 
     def test_list_nodes(self, populated_graph_store):
         """Test listing all nodes."""
@@ -342,30 +346,59 @@ class TestGraphStore:
         for node in [goal, subgoal_a, subgoal_b, task_a, task_b, task_c]:
             store.add_node(node)
 
-        # Add dependencies
-        store.add_dependency("goal", "subgoal_a")
-        store.add_dependency("goal", "subgoal_b")
-        store.add_dependency("subgoal_a", "task_a")
-        store.add_dependency("subgoal_a", "task_b")
-        store.add_dependency("subgoal_b", "task_c")
+        # Add parent-child relationships
+        # Goal is the parent of SubgoalA and SubgoalB
+        store.add_parent_child("goal", "subgoal_a")
+        store.add_parent_child("goal", "subgoal_b")
+        # SubgoalA is the parent of TaskA and TaskB
+        store.add_parent_child("subgoal_a", "task_a")
+        store.add_parent_child("subgoal_a", "task_b")
+        # SubgoalB is the parent of TaskC
+        store.add_parent_child("subgoal_b", "task_c")
+        # TaskB depends on TaskA (TaskB needs TaskA to be completed first)
         store.add_dependency("task_b", "task_a")
 
-        # Test ready nodes - should be task_b and task_c
-        # (task_a is completed, task_b depends on completed task_a, task_c has no deps)
+        # Test ready nodes - should be goal, subgoal_a, subgoal_b, task_b, and task_c
+        # task_a is completed, so it's not ready
+        # All other nodes have no dependencies, so they are ready
         ready_nodes = store.get_ready_nodes()
         ready_ids = {node.id for node in ready_nodes}
-        assert ready_ids == {"task_b", "task_c"}
+        assert ready_ids == {"goal", "subgoal_a", "subgoal_b", "task_b", "task_c"}
 
         # Test descendants of goal
+        # Goal is the parent of SubgoalA and SubgoalB, and they are parents of tasks
+        # So goal should have all descendants: subgoal_a, subgoal_b, task_a, task_b, task_c
         descendants = store.get_descendants("goal")
-        descendant_ids = {node.id for node in descendants}
+        descendant_ids = set(descendants)
         expected_descendants = {"subgoal_a", "subgoal_b", "task_a", "task_b", "task_c"}
         assert descendant_ids == expected_descendants
 
+        # Test descendants of subgoal_a (should have task_a and task_b)
+        descendants = store.get_descendants("subgoal_a")
+        descendant_ids = set(descendants)
+        expected_descendants = {"task_a", "task_b"}
+        assert descendant_ids == expected_descendants
+
+        # Test descendants of subgoal_b (should have task_c)
+        descendants = store.get_descendants("subgoal_b")
+        descendant_ids = set(descendants)
+        expected_descendants = {"task_c"}
+        assert descendant_ids == expected_descendants
+
         # Test ancestors of task_b
+        # Task_b depends on task_a, so task_a is an ancestor
+        # Task_b is also a child of subgoal_a, so subgoal_a is an ancestor
+        # And subgoal_a is a child of goal, so goal is also an ancestor
         ancestors = store.get_ancestors("task_b")
-        ancestor_ids = {node.id for node in ancestors}
-        expected_ancestors = {"subgoal_a", "goal"}
+        ancestor_ids = set(ancestors)
+        expected_ancestors = {"task_a", "subgoal_a", "goal"}
+        assert ancestor_ids == expected_ancestors
+
+        # Test ancestors of goal
+        # Goal is the root, so it has no ancestors
+        ancestors = store.get_ancestors("goal")
+        ancestor_ids = set(ancestors)
+        expected_ancestors = set()
         assert ancestor_ids == expected_ancestors
 
     def test_remove_node_with_dependencies(self):
@@ -411,7 +444,7 @@ class TestGraphStore:
         store.add_dependency("b", "c")
         store.add_dependency("c", "d")
 
-        # Only D should be ready initially
+        # Only D should be ready initially (it has no dependencies)
         ready = store.get_ready_nodes()
         assert len(ready) == 1
         assert ready[0].id == "d"

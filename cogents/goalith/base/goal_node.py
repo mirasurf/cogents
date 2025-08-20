@@ -190,3 +190,12 @@ class GoalNode(BaseModel):
             and self.execution_notes == other.execution_notes
             and self.performance_metrics == other.performance_metrics
         )
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert the GoalNode to a dictionary for serialization."""
+        return self.model_dump()
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "GoalNode":
+        """Create a GoalNode from a dictionary."""
+        return cls(**data)

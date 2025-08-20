@@ -27,9 +27,14 @@ class Scheduler:
             priority_policy: Policy for prioritization (default: simple priority)
             policy: Alias for priority_policy (for backward compatibility)
         """
-        # Accept either parameter name for flexibility
-        policy_to_use = policy or priority_policy or SimplePriorityPolicy()
-        self._policy = policy_to_use
+        # priority_policy takes precedence over policy
+        if priority_policy is not None:
+            self._policy = priority_policy
+        elif policy is not None:
+            self._policy = policy
+        else:
+            self._policy = SimplePriorityPolicy()
+
         self._stats = {
             "schedule_calls": 0,
             "nodes_scheduled": 0,
@@ -74,6 +79,8 @@ class Scheduler:
         Returns:
             Highest-priority ready node, or None if no ready nodes available
         """
+        self._stats["get_next_calls"] += 1
+
         if not nodes:
             return None
 
@@ -94,33 +101,32 @@ class Scheduler:
             if self._policy.compare(node, best_node) < 0:
                 best_node = node
 
-        self._stats["get_next_calls"] += 1
         self._stats["schedule_calls"] += 1  # get_next is also a scheduling operation
         return best_node
 
+    def reset_stats(self) -> None:
+        """Reset all statistics to zero."""
+        for key in self._stats:
+            self._stats[key] = 0
+
     def schedule(self, nodes: List[GoalNode], limit: Optional[int] = None) -> List[GoalNode]:
         """
-        Schedule nodes in priority order, filtering for ready nodes.
+        Schedule nodes in priority order.
 
         Args:
             nodes: List of nodes to consider for scheduling
             limit: Maximum number of nodes to return (default: all)
 
         Returns:
-            List of ready nodes in priority order
+            List of nodes in priority order
         """
         self._stats["schedule_calls"] += 1
 
         if not nodes:
             return []
 
-        # Filter for ready nodes (only PENDING and IN_PROGRESS)
-        from ..base.goal_node import NodeStatus
-
-        ready_nodes = [node for node in nodes if node.status in [NodeStatus.PENDING, NodeStatus.IN_PROGRESS]]
-
-        # Use peek_all to get sorted nodes
-        sorted_nodes = self.peek_all(ready_nodes)
+        # Use peek_all to get sorted nodes (no filtering by status)
+        sorted_nodes = self.peek_all(nodes)
 
         if limit is not None:
             sorted_nodes = sorted_nodes[:limit]

@@ -100,13 +100,13 @@ class GraphStore:
             if node.parent == node_id:
                 node.parent = None
 
-    def add_dependency(self, dependency_id: str, dependent_id: str) -> None:
+    def add_dependency(self, dependent_id: str, dependency_id: str) -> None:
         """
         Add a dependency edge between two nodes.
 
         Args:
-            dependency_id: The node that is depended upon (prerequisite)
             dependent_id: The node that depends on the prerequisite
+            dependency_id: The node that is depended upon (prerequisite)
 
         Raises:
             NodeNotFoundError: If either node doesn't exist
@@ -130,28 +130,27 @@ class GraphStore:
         self._nodes[dependent_id].add_dependency(dependency_id)
         # Update parent-child relationship: dependency becomes parent of dependent
         self._nodes[dependency_id].add_child(dependent_id)
+        # Note: We don't set parent here as it conflicts with hierarchical parent-child relationships
 
-    def remove_dependency(self, dependency_id: str, dependent_id: str) -> None:
+    def remove_dependency(self, dependent_id: str, dependency_id: str) -> None:
         """
         Remove a dependency edge between two nodes.
 
         Args:
-            dependency_id: The node that is depended upon (prerequisite)
             dependent_id: The node that depends on the prerequisite
+            dependency_id: The node that is depended upon (prerequisite)
 
-        Raises:
-            ValueError: If the dependency relationship doesn't exist
+        Note:
+            If the dependency relationship doesn't exist, this method does nothing.
         """
-        if not self._graph.has_edge(dependency_id, dependent_id):
-            raise ValueError(f"No dependency relationship exists between {dependency_id} and {dependent_id}")
+        if self._graph.has_edge(dependency_id, dependent_id):
+            self._graph.remove_edge(dependency_id, dependent_id)
 
-        self._graph.remove_edge(dependency_id, dependent_id)
+            if dependent_id in self._nodes:
+                self._nodes[dependent_id].remove_dependency(dependency_id)
 
-        if dependent_id in self._nodes:
-            self._nodes[dependent_id].remove_dependency(dependency_id)
-
-        if dependency_id in self._nodes:
-            self._nodes[dependency_id].remove_child(dependent_id)
+            if dependency_id in self._nodes:
+                self._nodes[dependency_id].remove_child(dependent_id)
 
     def add_parent_child(self, parent_id: str, child_id: str) -> None:
         """
@@ -198,22 +197,196 @@ class GraphStore:
         ready_nodes = []
 
         for node in self._nodes.values():
-            if node.status != NodeStatus.PENDING:
-                continue
+            if node.status == NodeStatus.PENDING:
+                # Check if all dependencies are completed
+                all_deps_completed = True
+                for dep_id in node.dependencies:
+                    if dep_id in self._nodes:
+                        dep_node = self._nodes[dep_id]
+                        if dep_node.status != NodeStatus.COMPLETED:
+                            all_deps_completed = False
+                            break
+                    else:
+                        # Dependency node doesn't exist, consider it completed
+                        pass
 
-            # Check if all dependencies are completed
-            all_deps_completed = True
-            for dep_id in node.dependencies:
-                if dep_id in self._nodes:
-                    dep_node = self._nodes[dep_id]
-                    if dep_node.status != NodeStatus.COMPLETED:
-                        all_deps_completed = False
-                        break
-
-            if all_deps_completed:
-                ready_nodes.append(node)
+                if all_deps_completed:
+                    ready_nodes.append(node)
 
         return ready_nodes
+
+    def get_parents(self, node_id: str) -> List[GoalNode]:
+        """
+        Get all parent nodes of a given node.
+
+        Args:
+            node_id: The node ID
+
+        Returns:
+            List of parent GoalNode objects (including both hierarchical parents and dependencies)
+        """
+        if node_id not in self._nodes:
+            return []
+
+        node = self._nodes[node_id]
+        parents = []
+
+        # Add hierarchical parent if it exists
+        if node.parent and node.parent in self._nodes:
+            parents.append(self._nodes[node.parent])
+
+        # Add dependency parents
+        for dep_id in node.dependencies:
+            if dep_id in self._nodes:
+                parents.append(self._nodes[dep_id])
+
+        return parents
+
+    def get_children(self, node_id: str) -> List[GoalNode]:
+        """
+        Get all child nodes of a given node.
+
+        Args:
+            node_id: The node ID
+
+        Returns:
+            List of child GoalNode objects
+        """
+        if node_id not in self._nodes:
+            return []
+
+        node = self._nodes[node_id]
+        return [self._nodes[child_id] for child_id in node.children if child_id in self._nodes]
+
+    def get_descendants(self, node_id: str) -> List[str]:
+        """
+        Get all descendant nodes of a given node.
+
+        Args:
+            node_id: The node ID
+
+        Returns:
+            List of descendant node IDs
+        """
+        if node_id not in self._nodes:
+            return []
+
+        descendants = set()
+        to_process = [node_id]
+
+        while to_process:
+            current_id = to_process.pop(0)
+            current = self._nodes[current_id]
+
+            for child_id in current.children:
+                if child_id not in descendants:
+                    descendants.add(child_id)
+                    to_process.append(child_id)
+        return list(descendants)
+
+    def get_ancestors(self, node_id: str) -> List[str]:
+        """
+        Get all ancestor nodes of a given node.
+
+        Args:
+            node_id: The node ID
+
+        Returns:
+            List of ancestor node IDs
+        """
+        if node_id not in self._nodes:
+            return []
+
+        ancestors = set()
+        current_id = node_id
+
+        # Add parent ancestors
+        while current_id in self._nodes:
+            node = self._nodes[current_id]
+            if node.parent and node.parent not in ancestors:
+                ancestors.add(node.parent)
+                current_id = node.parent
+            else:
+                break
+
+        # Add dependency ancestors recursively
+        def add_dependency_ancestors(node_id: str, visited: set):
+            if node_id in visited:
+                return
+            visited.add(node_id)
+
+            node = self._nodes[node_id]
+            for dep_id in node.dependencies:
+                if dep_id in self._nodes and dep_id not in ancestors:
+                    ancestors.add(dep_id)
+                    # Recursively add ancestors of this dependency
+                    add_dependency_ancestors(dep_id, visited)
+
+        # Start recursive traversal from the original node
+        add_dependency_ancestors(node_id, set())
+
+        return list(ancestors)
+
+    def list_nodes(self) -> List[GoalNode]:
+        """
+        Get list of all node objects.
+
+        Returns:
+            List of all GoalNode objects
+        """
+        return list(self._nodes.values())
+
+    def save_graph(self, filepath: str) -> None:
+        """
+        Save the graph to a file.
+
+        Args:
+            filepath: Path to save the graph
+        """
+        # Convert sets to lists for JSON serialization
+        graph_data = {"nodes": {}, "edges": list(self._graph.edges())}
+
+        for node_id, node in self._nodes.items():
+            node_dict = node.to_dict()
+            # Convert sets to lists for JSON serialization
+            if "dependencies" in node_dict:
+                node_dict["dependencies"] = list(node_dict["dependencies"])
+            if "children" in node_dict:
+                node_dict["children"] = list(node_dict["children"])
+            graph_data["nodes"][node_id] = node_dict
+
+        with open(filepath, "w") as f:
+            json.dump(graph_data, f, indent=2, default=str)
+
+    def load_graph(self, filepath: str) -> None:
+        """
+        Load the graph from a file.
+
+        Args:
+            filepath: Path to load the graph from
+        """
+        with open(filepath, "r") as f:
+            graph_data = json.load(f)
+
+        # Clear existing data
+        self._nodes.clear()
+        self._graph.clear()
+
+        # Load nodes
+        for node_id, node_dict in graph_data["nodes"].items():
+            # Convert lists back to sets for dependencies and children
+            if "dependencies" in node_dict and isinstance(node_dict["dependencies"], list):
+                node_dict["dependencies"] = set(node_dict["dependencies"])
+            if "children" in node_dict and isinstance(node_dict["children"], list):
+                node_dict["children"] = set(node_dict["children"])
+
+            node = GoalNode.from_dict(node_dict)
+            self._nodes[node_id] = node
+            self._graph.add_node(node_id)
+
+        # Load edges
+        for edge in graph_data["edges"]:
+            self._graph.add_edge(*edge)
 
     def get_nodes_by_status(self, status: NodeStatus) -> List[GoalNode]:
         """
@@ -226,25 +399,6 @@ class GraphStore:
             List of GoalNodes with the given status
         """
         return [node for node in self._nodes.values() if node.status == status]
-
-    def get_children(self, node_id: str) -> List[GoalNode]:
-        """
-        Get all child nodes of a given node.
-
-        Args:
-            node_id: The parent node ID
-
-        Returns:
-            List of child GoalNodes
-
-        Raises:
-            NodeNotFoundError: If node doesn't exist
-        """
-        if node_id not in self._nodes:
-            raise NodeNotFoundError(f"Node {node_id} not found")
-
-        node = self._nodes[node_id]
-        return [self._nodes[child_id] for child_id in node.children if child_id in self._nodes]
 
     def get_dependencies(self, node_id: str) -> List[GoalNode]:
         """
@@ -423,17 +577,7 @@ class GraphStore:
         return len(self._graph.edges())
 
     # Methods expected by tests
-    def get_ancestors(self, node_id: str) -> set:
-        """Get all ancestors of a node."""
-        if node_id not in self._nodes:
-            raise NodeNotFoundError(f"Node {node_id} not found")
-        return set(nx.ancestors(self._graph, node_id))
-
-    def get_descendants(self, node_id: str) -> set:
-        """Get all descendants of a node."""
-        if node_id not in self._nodes:
-            raise NodeNotFoundError(f"Node {node_id} not found")
-        return set(nx.descendants(self._graph, node_id))
+    # Note: get_ancestors is already defined above and handles both parent and dependency relationships
 
     def topological_sort(self) -> List[str]:
         """Get topological sort of the graph."""

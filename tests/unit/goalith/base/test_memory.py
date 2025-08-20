@@ -1,6 +1,8 @@
 """
 Unit tests for goalith.base.memory module.
 """
+from typing import Any, Dict, List, Optional
+
 import pytest
 
 from cogents.goalith.base.memory import MemoryInterface
@@ -12,6 +14,68 @@ class ConcreteMemoryInterface(MemoryInterface):
     def __init__(self):
         self.contexts = {}
         self.execution_histories = {}
+        self._data = {}
+        self._metadata = {}
+
+    @property
+    def name(self) -> str:
+        """Get the name of this memory backend."""
+        return "concrete_test_memory"
+
+    def store(self, key: str, value: Any, metadata: Optional[Dict[str, Any]] = None) -> bool:
+        """Store a value with optional metadata."""
+        try:
+            self._data[key] = value
+            if metadata:
+                self._metadata[key] = metadata
+            return True
+        except Exception:
+            return False
+
+    def retrieve(self, key: str) -> Optional[Any]:
+        """Retrieve a value by key."""
+        return self._data.get(key)
+
+    def search(self, query: str, limit: int = 10) -> List[Dict[str, Any]]:
+        """Search for values matching a query."""
+        results = []
+        query_lower = query.lower()
+
+        for key, value in self._data.items():
+            if len(results) >= limit:
+                break
+
+            if query_lower in key.lower() or query_lower in str(value).lower():
+                result = {"key": key, "value": value}
+                if key in self._metadata:
+                    result["metadata"] = self._metadata[key]
+                results.append(result)
+
+        return results
+
+    def delete(self, key: str) -> bool:
+        """Delete a value by key."""
+        try:
+            self._data.pop(key, None)
+            self._metadata.pop(key, None)
+            return True
+        except Exception:
+            return False
+
+    def list_keys(self, prefix: Optional[str] = None) -> List[str]:
+        """List all keys, optionally filtered by prefix."""
+        if prefix:
+            return [key for key in self._data.keys() if key.startswith(prefix)]
+        return list(self._data.keys())
+
+    def clear(self) -> bool:
+        """Clear all stored data."""
+        try:
+            self._data.clear()
+            self._metadata.clear()
+            return True
+        except Exception:
+            return False
 
     def store_context(self, node_id, key, context):
         """Store context in memory."""
