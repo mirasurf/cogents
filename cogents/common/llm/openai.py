@@ -351,3 +351,12 @@ class LLMClient(BaseLLMClient):
                 )
         except Exception as e:
             logger.debug(f"Could not extract token usage: {e}")
+
+    def embed(self, text: str) -> List[float]:
+        raise NotImplementedError("Embedding is not supported by the openai provider")
+
+    def embed_batch(self, chunks: List[str]) -> List[List[float]]:
+        raise NotImplementedError("Embedding is not supported by the openai provider")
+
+    def rerank(self, query: str, chunks: List[str]) -> List[str]:
+        raise NotImplementedError("Reranking is not supported by the openai provider")

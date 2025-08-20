@@ -111,3 +111,19 @@ class BaseLLMClient(ABC):
         Returns:
             Analysis of the image
         """
+
+    @abstractmethod
+    def embed(self, text: str) -> List[float]:
+        """Generate embeddings for input text"""
+
+    @abstractmethod
+    def embed_batch(self, chunks: List[str]) -> List[List[float]]:
+        """Generate embeddings for input text"""
+
+    @abstractmethod
+    def rerank(
+        self,
+        query: str,
+        chunks: List[str],
+    ) -> List[str]:
+        """Rerank chunks based on their relevance to the query"""

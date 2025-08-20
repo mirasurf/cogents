@@ -359,3 +359,14 @@ class LLMClient(BaseLLMClient):
                 )
         except Exception as e:
             logger.debug(f"Could not estimate token usage: {e}")
+
+    def embed(self, text: str) -> List[float]:
+        """Generate embeddings for input text"""
+        raise NotImplementedError("Embedding is not supported by the llamacpp provider")
+
+    def embed_batch(self, chunks: List[str]) -> List[List[float]]:
+        """Generate embeddings for input text"""
+        raise NotImplementedError("Embedding is not supported by the llamacpp provider")
+
+    def rerank(self, query: str, chunks: List[str]) -> List[str]:
+        raise NotImplementedError("Reranking is not supported by the llamacpp provider")

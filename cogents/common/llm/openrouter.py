@@ -10,7 +10,7 @@ This module provides:
 """
 
 import os
-from typing import Optional, TypeVar
+from typing import List, Optional, TypeVar
 
 from cogents.common.consts import GEMINI_FLASH
 from cogents.common.llm.openai import LLMClient as OpenAILLMClient
@@ -64,3 +64,12 @@ class LLMClient(OpenAILLMClient):
 
         # Configure LangSmith tracing for observability
         self._langsmith_provider = "openrouter"
+
+    def embed(self, text: str) -> List[float]:
+        raise NotImplementedError("Embedding is not supported by the openrouter provider")
+
+    def embed_batch(self, chunks: List[str]) -> List[List[float]]:
+        raise NotImplementedError("Embedding is not supported by the openrouter provider")
+
+    def rerank(self, query: str, chunks: List[str]) -> List[str]:
+        raise NotImplementedError("Reranking is not supported by the openrouter provider")
