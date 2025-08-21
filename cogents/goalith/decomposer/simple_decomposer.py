@@ -1,7 +1,8 @@
 from typing import Any, Dict, List, Optional
 
-from ..base.decomposer import GoalDecomposer
-from ..base.goal_node import GoalNode, NodeType
+from cogents.goalith.goalgraph.node import GoalNode
+
+from .base import GoalDecomposer
 
 
 class SimpleListDecomposer(GoalDecomposer):
@@ -42,7 +43,6 @@ class SimpleListDecomposer(GoalDecomposer):
         for i, subtask_desc in enumerate(self._subtasks):
             task_node = GoalNode(
                 description=subtask_desc,
-                type=NodeType.TASK,
                 parent=goal_node.id,
                 priority=goal_node.priority,
                 context=goal_node.context.copy() if goal_node.context else {},

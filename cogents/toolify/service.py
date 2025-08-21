@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 
 from .execute import AdapterRouter
-from .models import ExecuteRequest, ExecuteResult, ExecutionPlan, TelemetryEvent, ToolSpec
+from .models import ExecuteRequest, ExecuteResult, ExecutionPlan, TelemetryEvent, ToolCard
 from .plan import PlanningEngine
 from .registry import ToolRegistry, default_tool_registry
 
@@ -17,11 +17,11 @@ class ToolifyService:
         self._idempotent_cache: Dict[str, ExecuteResult] = {}
 
     # Registry APIs
-    def register_tool(self, spec: ToolSpec, replace: bool = False) -> None:
-        self._registry.register(spec, replace=replace)
-        self._emit(TelemetryEvent(event_type="tool_registered", data={"tool_id": spec.tool_id}).model_dump())
+    def register_tool(self, card: ToolCard, replace: bool = False) -> None:
+        self._registry.register(card, replace=replace)
+        self._emit(TelemetryEvent(event_type="tool_registered", data={"tool_id": card.tool_id}).model_dump())
 
-    def list_tools(self) -> List[ToolSpec]:
+    def list_tools(self) -> List[ToolCard]:
         return list(self._registry.tools.values())
 
     # Planning

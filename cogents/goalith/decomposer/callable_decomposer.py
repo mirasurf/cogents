@@ -1,8 +1,9 @@
 from typing import Any, Callable, Dict, List, Optional
 
-from ..base.decomposer import GoalDecomposer
-from ..base.errors import DecompositionError
-from ..base.goal_node import GoalNode
+from cogents.goalith.errors import DecompositionError
+from cogents.goalith.goalgraph.node import GoalNode
+
+from .base import GoalDecomposer
 
 
 class CallableDecomposer(GoalDecomposer):

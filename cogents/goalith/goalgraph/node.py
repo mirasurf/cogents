@@ -10,14 +10,6 @@ from uuid import uuid4
 from pydantic import BaseModel, Field
 
 
-class NodeType(str, Enum):
-    """Types of nodes in the goal DAG."""
-
-    GOAL = "goal"
-    SUBGOAL = "subgoal"
-    TASK = "task"
-
-
 class NodeStatus(str, Enum):
     """Status of a node in the goal DAG."""
 
@@ -37,29 +29,20 @@ class GoalNode(BaseModel):
     and dependency management.
     """
 
-    # Core identification
+    # Node metadata
     id: str = Field(default_factory=lambda: str(uuid4()))
     description: str = Field(..., description="Human-readable description of the goal/task")
-
-    # Node metadata
-    type: NodeType = Field(default=NodeType.TASK)
     status: NodeStatus = Field(default=NodeStatus.PENDING)
     priority: float = Field(default=1.0, description="Priority score (higher = more important)")
+    decomposer_name: Optional[str] = Field(default=None, description="Name of decomposer used")
+    context: Dict[str, Any] = Field(default_factory=dict, description="Additional context data")
+    tags: List[str] = Field(default_factory=list, description="Tags for categorization")
+    estimated_effort: Optional[str] = Field(default=None, description="Estimated effort for this task")
 
     # Relationships (managed by GraphStore, but stored here for serialization)
     dependencies: Set[str] = Field(default_factory=set, description="IDs of nodes this depends on")
     children: Set[str] = Field(default_factory=set, description="IDs of child nodes")
     parent: Optional[str] = Field(default=None, description="ID of parent node")
-
-    # Context and metadata
-    context: Dict[str, Any] = Field(default_factory=dict, description="Additional context data")
-    tags: List[str] = Field(default_factory=list, description="Tags for categorization")
-    estimated_effort: Optional[str] = Field(default=None, description="Estimated effort for this task")
-    notes: Optional[str] = Field(default=None, description="Additional notes")
-
-    # Execution metadata
-    decomposer_name: Optional[str] = Field(default=None, description="Name of decomposer used")
-    assigned_to: Optional[str] = Field(default=None, description="Agent or user assigned to this node")
 
     # Timing
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -69,13 +52,11 @@ class GoalNode(BaseModel):
     deadline: Optional[datetime] = Field(default=None)
 
     # Execution tracking
+    assigned_to: Optional[str] = Field(default=None, description="Agent or user assigned to this node")
     retry_count: int = Field(default=0)
     max_retries: int = Field(default=3)
     error_message: Optional[str] = Field(default=None)
-
-    # Memory and learning
-    execution_notes: List[str] = Field(default_factory=list)
-    performance_metrics: Dict[str, Any] = Field(default_factory=dict)
+    execution_notes: Dict[str, Any] = Field(default_factory=dict)
 
     class Config:
         """Pydantic configuration."""
@@ -125,7 +106,7 @@ class GoalNode(BaseModel):
 
     def add_note(self, note: str) -> None:
         """Add an execution note."""
-        self.execution_notes.append(f"{datetime.now(timezone.utc).isoformat()}: {note}")
+        self.execution_notes[datetime.now(timezone.utc).isoformat()] = note
         self.updated_at = datetime.now(timezone.utc)
 
     def update_context(self, key: str, value: Any) -> None:
@@ -171,16 +152,14 @@ class GoalNode(BaseModel):
         return (
             self.id == other.id
             and self.description == other.description
-            and self.type == other.type
             and self.status == other.status
             and self.priority == other.priority
+            and self.estimated_effort == other.estimated_effort
             and self.dependencies == other.dependencies
             and self.children == other.children
             and self.parent == other.parent
             and self.context == other.context
             and self.tags == other.tags
-            and self.estimated_effort == other.estimated_effort
-            and self.notes == other.notes
             and self.decomposer_name == other.decomposer_name
             and self.assigned_to == other.assigned_to
             and self.deadline == other.deadline
@@ -188,7 +167,6 @@ class GoalNode(BaseModel):
             and self.max_retries == other.max_retries
             and self.error_message == other.error_message
             and self.execution_notes == other.execution_notes
-            and self.performance_metrics == other.performance_metrics
         )
 
     def to_dict(self) -> Dict[str, Any]:

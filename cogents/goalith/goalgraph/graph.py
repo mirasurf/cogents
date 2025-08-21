@@ -8,11 +8,11 @@ from typing import Dict, List
 
 import networkx as nx
 
-from .errors import CycleDetectedError, NodeNotFoundError
-from .goal_node import GoalNode, NodeStatus
+from cogents.goalith.errors import CycleDetectedError, NodeNotFoundError
+from cogents.goalith.goalgraph.node import GoalNode, NodeStatus
 
 
-class GraphStore:
+class GoalGraph:
     """
     Wraps a NetworkX DiGraph to provide DAG storage and basic graph operations.
 

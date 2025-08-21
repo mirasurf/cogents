@@ -1,4 +1,4 @@
-from .models import ExecuteRequest, ExecuteResult, ExecutionPlan, PlanStep, ToolCapability, ToolSpec
+from .models import ExecuteRequest, ExecuteResult, ExecutionPlan, PlanStep, ToolCapability, ToolCard
 from .plan import PlanningEngine
 from .registry import ToolRegistry, default_tool_registry
 from .service import ToolifyService
@@ -12,6 +12,6 @@ __all__ = [
     "PlanStep",
     "ExecuteRequest",
     "ExecuteResult",
-    "ToolSpec",
+    "ToolCard",
     "ToolCapability",
 ]

@@ -2,21 +2,21 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
-from .models import ExecuteResult, PlanStep, ToolSpec
+from .models import ExecuteResult, PlanStep, ToolCard
 
 
 class BaseAdapter:
-    def execute(self, spec: ToolSpec, step: PlanStep, input_data: Dict[str, Any]) -> ExecuteResult:
+    def execute(self, spec: ToolCard, step: PlanStep, input_data: Dict[str, Any]) -> ExecuteResult:
         raise NotImplementedError
 
 
 class LocalAdapter(BaseAdapter):
-    def execute(self, spec: ToolSpec, step: PlanStep, input_data: Dict[str, Any]) -> ExecuteResult:
+    def execute(self, spec: ToolCard, step: PlanStep, input_data: Dict[str, Any]) -> ExecuteResult:
         return ExecuteResult(output={"echo": input_data, "tool": step.tool_id})
 
 
 class HTTPAdapter(BaseAdapter):
-    def execute(self, spec: ToolSpec, step: PlanStep, input_data: Dict[str, Any]) -> ExecuteResult:
+    def execute(self, spec: ToolCard, step: PlanStep, input_data: Dict[str, Any]) -> ExecuteResult:
         try:
             import requests  # type: ignore
         except Exception as e:  # pragma: no cover
@@ -39,7 +39,7 @@ class HTTPAdapter(BaseAdapter):
 
 
 class LangChainAdapter(BaseAdapter):
-    def execute(self, spec: ToolSpec, step: PlanStep, input_data: Dict[str, Any]) -> ExecuteResult:
+    def execute(self, spec: ToolCard, step: PlanStep, input_data: Dict[str, Any]) -> ExecuteResult:
         try:
             from langchain_core.tools import BaseTool  # type: ignore
         except Exception as e:  # pragma: no cover
@@ -60,7 +60,7 @@ class LangChainAdapter(BaseAdapter):
 
 
 class MCPAdapter(BaseAdapter):
-    def execute(self, spec: ToolSpec, step: PlanStep, input_data: Dict[str, Any]) -> ExecuteResult:
+    def execute(self, spec: ToolCard, step: PlanStep, input_data: Dict[str, Any]) -> ExecuteResult:
         # Expect spec.runtime to be an MCP client with a 'call' method
         client = spec.runtime
         if client is None or not hasattr(client, "call"):
@@ -82,7 +82,7 @@ class AdapterRouter:
         self._langchain = LangChainAdapter()
         self._mcp = MCPAdapter()
 
-    def execute(self, spec: ToolSpec, step: PlanStep, input_data: Dict[str, Any]) -> ExecuteResult:
+    def execute(self, spec: ToolCard, step: PlanStep, input_data: Dict[str, Any]) -> ExecuteResult:
         tool_type = (spec.type or "").lower()
         if tool_type in ("local", "custom", ""):
             return self._local.execute(spec, step, input_data)

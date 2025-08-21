@@ -10,7 +10,7 @@ class ToolCapability(BaseModel):
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
-class ToolSpec(BaseModel):
+class ToolCard(BaseModel):
     tool_id: str = Field(description="Unique tool identifier")
     name: str = Field(description="Human-readable name")
     type: Literal["langchain", "mcp", "http", "local", "custom"] = Field(

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from cogents.goalith import GoalithService, NodeType
 from cogents.orchestrix import OrchestrixService
-from cogents.toolify import ToolCapability, ToolifyService, ToolSpec
+from cogents.toolify import ToolCapability, ToolCard, ToolifyService
 
 
 def main() -> None:
@@ -15,7 +15,7 @@ def main() -> None:
     # Setup Toolify with a local echo tool
     toolify = ToolifyService()
     toolify.register_tool(
-        ToolSpec(
+        ToolCard(
             tool_id="echo_local",
             name="Echo",
             type="local",

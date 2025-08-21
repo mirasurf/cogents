@@ -4,16 +4,17 @@ LLM-based goal decomposer for the GoalithService.
 Provides structured goal decomposition using LLM clients with instructor integration.
 """
 
+import os
 from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
 from cogents.common.llm import get_llm_client_instructor
 from cogents.common.logging import get_logger
+from cogents.goalith.errors import DecompositionError
+from cogents.goalith.goalgraph.node import GoalNode
 
-from ..base.decomposer import GoalDecomposer
-from ..base.errors import DecompositionError
-from ..base.goal_node import GoalNode, NodeType
+from .base import GoalDecomposer
 from .prompts import get_decomposition_system_prompt, get_decomposition_user_prompt, get_fallback_prompt
 
 logger = get_logger(__name__)
@@ -23,10 +24,7 @@ class SubgoalSpec(BaseModel):
     """Specification for a single subgoal or task."""
 
     description: str = Field(description="Clear, actionable description of the subgoal or task")
-    type: str = Field(
-        description="Type of node: 'goal', 'subgoal', or 'task'",
-        pattern="^(goal|subgoal|task)$",
-    )
+    context: Optional[str] = Field(description="Additional notes or context about this subgoal", default=None)
     priority: float = Field(
         description="Priority score between 0.0 and 10.0 (higher = more important)",
         ge=0.0,
@@ -44,16 +42,12 @@ class SubgoalSpec(BaseModel):
         description="Tags for categorization (e.g., 'research', 'planning', 'execution')",
         default_factory=list,
     )
-    notes: Optional[str] = Field(description="Additional notes or context about this subgoal", default=None)
 
 
 class GoalDecomposition(BaseModel):
     """Complete decomposition of a goal into subgoals and tasks."""
 
     reasoning: str = Field(description="Explanation of the decomposition approach and rationale")
-    decomposition_strategy: str = Field(
-        description="Strategy used: 'sequential', 'parallel', 'hybrid', or 'milestone-based'"
-    )
     subgoals: List[SubgoalSpec] = Field(
         description="List of subgoals and tasks, in logical order (maximum 6 items for focus and manageability)",
         min_length=1,
@@ -78,19 +72,16 @@ class LLMDecomposer(GoalDecomposer):
     Enhanced LLM-based goal decomposer using structured completion.
 
     Uses the project's LLM infrastructure with instructor for structured output
-    to decompose goals into subgoals and tasks. Includes contextual features
-    for domain-specific knowledge and historical patterns.
+    to decompose goals into subgoals.
     """
 
     def __init__(
         self,
-        provider: str = "openrouter",
+        provider: str = os.getenv("COGENTS_LLM_PROVIDER", "openrouter"),
         model_name: Optional[str] = None,
         temperature: float = 0.3,
         max_tokens: int = 2000,
         name: str = "llm_decomposer",
-        domain_context: Optional[Dict[str, Any]] = None,
-        include_historical_patterns: bool = True,
     ):
         """
         Initialize LLM decomposer.
@@ -100,16 +91,12 @@ class LLMDecomposer(GoalDecomposer):
             temperature: Sampling temperature for LLM
             max_tokens: Maximum tokens for response
             name: Name of this decomposer
-            domain_context: Domain-specific context to include
-            include_historical_patterns: Whether to include historical decomposition patterns
         """
         self._provider = provider
         self._model_name = model_name
         self._temperature = temperature
         self._max_tokens = max_tokens
         self._name = name
-        self._domain_context = domain_context or {}
-        self._include_historical = include_historical_patterns
         self._llm_client = None  # Lazy initialization
 
     @property
@@ -133,7 +120,7 @@ class LLMDecomposer(GoalDecomposer):
             context: Optional context for decomposition
 
         Returns:
-            List of subgoal/task nodes
+            List of subgoal nodes
 
         Raises:
             DecompositionError: If decomposition fails
@@ -146,8 +133,6 @@ class LLMDecomposer(GoalDecomposer):
             user_prompt = get_decomposition_user_prompt(
                 goal_node=goal_node,
                 context=context,
-                domain_context=self._domain_context,
-                include_historical_patterns=self._include_historical,
             )
 
             # Get structured decomposition from LLM with system and user messages
@@ -205,8 +190,6 @@ class LLMDecomposer(GoalDecomposer):
         user_prompt = get_decomposition_user_prompt(
             goal_node=goal_node,
             context=context,
-            domain_context=self._domain_context,
-            include_historical_patterns=False,  # Simpler for fallback
         )
 
         # Combine prompts for fallback
@@ -231,7 +214,6 @@ class LLMDecomposer(GoalDecomposer):
                 # Create a simple subgoal
                 node = GoalNode(
                     description=line.lstrip("1234567890.-• "),  # Remove numbering
-                    type=NodeType.SUBGOAL,
                     priority=5.0,  # Default priority
                     parent=goal_node.id,
                     context={
@@ -268,7 +250,7 @@ class LLMDecomposer(GoalDecomposer):
                     "llm_generated": True,
                     "decomposition_strategy": decomposition.decomposition_strategy,
                     "estimated_effort": spec.estimated_effort,
-                    "notes": spec.notes,
+                    "context": spec.context,
                     "parent_goal_id": parent_goal.id,
                 }
             )
@@ -276,7 +258,6 @@ class LLMDecomposer(GoalDecomposer):
             # Create the node
             node = GoalNode(
                 description=spec.description,
-                type=NodeType(spec.type),
                 priority=spec.priority,
                 parent=parent_goal.id,
                 context=node_context,
@@ -285,7 +266,7 @@ class LLMDecomposer(GoalDecomposer):
             )
 
             # Copy deadline from parent if not specified and it's a task
-            if parent_goal.deadline and node.type == NodeType.TASK:
+            if parent_goal.deadline:
                 node.deadline = parent_goal.deadline
 
             nodes.append(node)

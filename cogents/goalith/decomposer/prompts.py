@@ -6,7 +6,7 @@ Separated into system and user messages for easier maintenance and optimization.
 
 from typing import Any, Dict, Optional
 
-from ..base.goal_node import GoalNode, NodeType
+from cogents.goalith.goalgraph.node import GoalNode
 
 
 def get_decomposition_system_prompt() -> str:
@@ -24,11 +24,6 @@ def get_decomposition_system_prompt() -> str:
 3. **Appropriate Granularity**: Break down into manageable chunks (not too big, not too small)
 4. **Clear Dependencies**: Identify which subgoals depend on others
 5. **Realistic Effort**: Estimate effort accurately based on complexity
-
-**NODE TYPES:**
-- 'task': Concrete, actionable items that can be completed in a single session
-- 'subgoal': Intermediate objectives that may require multiple tasks
-- 'goal': Major milestones or complex objectives
 
 **DECOMPOSITION STRATEGIES:**
 - **Sequential**: Tasks must be done in order (waterfall approach)
@@ -60,8 +55,6 @@ Your response must be a structured JSON following the GoalDecomposition schema."
 def get_decomposition_user_prompt(
     goal_node: GoalNode,
     context: Optional[Dict[str, Any]] = None,
-    domain_context: Optional[Dict[str, Any]] = None,
-    include_historical_patterns: bool = True,
 ) -> str:
     """
     Generate the user prompt for goal decomposition.
@@ -69,8 +62,6 @@ def get_decomposition_user_prompt(
     Args:
         goal_node: The goal node to decompose
         context: Optional additional context for decomposition
-        domain_context: Domain-specific context
-        include_historical_patterns: Whether to include historical patterns
 
     Returns:
         Formatted user prompt with goal details and context
@@ -85,7 +76,6 @@ def get_decomposition_user_prompt(
 
     # Goal details
     prompt_parts.append("**GOAL DETAILS:**")
-    prompt_parts.append(f"- Type: {goal_node.type}")
     prompt_parts.append(f"- Priority: {goal_node.priority}")
     prompt_parts.append(f"- Current Status: {goal_node.status}")
 
@@ -112,28 +102,6 @@ def get_decomposition_user_prompt(
             prompt_parts.append(f"- {key}: {value}")
         prompt_parts.append("")
 
-    # Add domain-specific context
-    if domain_context:
-        prompt_parts.append("**DOMAIN CONTEXT:**")
-        for key, value in domain_context.items():
-            prompt_parts.append(f"- {key}: {value}")
-        prompt_parts.append("")
-
-    # Add goal type specific guidance
-    type_guidance = _get_type_specific_guidance(goal_node.type)
-    if type_guidance:
-        prompt_parts.append("**TYPE-SPECIFIC GUIDANCE:**")
-        prompt_parts.append(type_guidance)
-        prompt_parts.append("")
-
-    # Add historical patterns if enabled
-    if include_historical_patterns:
-        patterns = _get_historical_patterns(goal_node)
-        if patterns:
-            prompt_parts.append("**HISTORICAL PATTERNS:**")
-            prompt_parts.append(patterns)
-            prompt_parts.append("")
-
     # Add specific requirements for this decomposition
     prompt_parts.append("**DECOMPOSITION REQUIREMENTS:**")
     prompt_parts.append("- Break down into maximum 6 subgoals/tasks (this is critical for focus)")
@@ -154,79 +122,6 @@ def get_decomposition_user_prompt(
     return "\n".join(prompt_parts)
 
 
-def _get_type_specific_guidance(node_type: NodeType) -> str:
-    """Get guidance specific to the node type."""
-
-    guidance = {
-        NodeType.GOAL: """For GOAL decomposition:
-- Break into major phases or milestones (max 6)
-- Consider resource allocation and timeline
-- Include planning, execution, and review phases
-- Ensure measurable outcomes and success criteria
-- Focus on strategic deliverables rather than tactical tasks""",
-        NodeType.SUBGOAL: """For SUBGOAL decomposition:
-- Focus on concrete deliverables (max 6)
-- Keep tasks specific and actionable
-- Consider dependencies and sequencing
-- Include validation and quality assurance steps
-- Ensure each item moves toward the subgoal completion""",
-        NodeType.TASK: """For TASK decomposition:
-- Break into atomic actions (max 6)
-- Each subtask should be completable in one session
-- Include preparation and cleanup steps
-- Consider error handling and rollback procedures
-- Focus on the specific steps needed to complete the task""",
-    }
-
-    return guidance.get(node_type, "")
-
-
-def _get_historical_patterns(goal_node: GoalNode) -> str:
-    """Get historical decomposition patterns for similar goals."""
-
-    # This is a placeholder for actual historical pattern analysis
-    # In a real implementation, this would query the memory system
-    # for similar goals and their successful decomposition patterns
-
-    patterns = []
-
-    # Add pattern based on goal tags
-    if "planning" in goal_node.tags:
-        patterns.append(
-            "- Planning goals typically benefit from: research → analysis → strategy → implementation → review (5 phases)"
-        )
-
-    if "project" in goal_node.tags:
-        patterns.append(
-            "- Project goals often follow: requirements → design → development → testing → deployment → maintenance (6 phases)"
-        )
-
-    if "learning" in goal_node.tags:
-        patterns.append(
-            "- Learning goals work well with: assessment → planning → study → practice → evaluation → reflection (6 phases)"
-        )
-
-    if "research" in goal_node.tags:
-        patterns.append(
-            "- Research goals typically involve: literature review → methodology → data collection → analysis → documentation (5 phases)"
-        )
-
-    if "development" in goal_node.tags:
-        patterns.append(
-            "- Development goals usually include: requirements → design → implementation → testing → deployment (5 phases)"
-        )
-
-    if "marketing" in goal_node.tags:
-        patterns.append(
-            "- Marketing goals often involve: market research → strategy → content creation → campaign execution → analysis (5 phases)"
-        )
-
-    if patterns:
-        return "\n".join(patterns)
-
-    return ""
-
-
 def get_fallback_prompt() -> str:
     """
     Get a fallback prompt when structured generation fails.
@@ -238,9 +133,8 @@ def get_fallback_prompt() -> str:
 
 For each item, provide:
 1. Clear description of what needs to be done
-2. Type (goal, subgoal, or task)  
-3. Priority (1-10 scale)
-4. Estimated effort
-5. Any dependencies
+2. Priority (1-10 scale)
+3. Estimated effort
+4. Any dependencies
 
 Focus on the most essential steps needed to achieve the goal. Keep it practical and actionable."""

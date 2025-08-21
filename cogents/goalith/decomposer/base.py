@@ -8,7 +8,7 @@ the goalith_service module to avoid circular imports.
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
 
-from .goal_node import GoalNode
+from cogents.goalith.goalgraph.node import GoalNode
 
 
 class GoalDecomposer(ABC):

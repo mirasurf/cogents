@@ -6,8 +6,6 @@ from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
-from .update_event import UpdateEvent
-
 
 class ConflictType(str, Enum):
     """Types of conflicts that can occur."""
@@ -21,15 +19,6 @@ class ConflictType(str, Enum):
     SEMANTIC_INCONSISTENCY = "semantic_inconsistency"
 
 
-class ConflictSeverity(str, Enum):
-    """Severity levels for conflicts."""
-
-    LOW = "low"
-    MEDIUM = "medium"
-    HIGH = "high"
-    CRITICAL = "critical"
-
-
 class Conflict(BaseModel):
     """
     Represents a conflict in the system.
@@ -38,12 +27,10 @@ class Conflict(BaseModel):
     # Core identification
     id: str = Field(default_factory=lambda: str(uuid4()))
     conflict_type: ConflictType = Field(..., description="Type of conflict")
-    severity: ConflictSeverity = Field(..., description="Severity level")
 
     # Conflict details
     affected_nodes: List[str] = Field(..., description="IDs of affected nodes")
     description: str = Field(default="", description="Human-readable description")
-    events: List[UpdateEvent] = Field(default_factory=list, description="Update events that caused the conflict")
     context: Dict[str, Any] = Field(default_factory=dict, description="Additional conflict context")
     detected_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc), description="When the conflict was detected"
@@ -74,10 +61,8 @@ class Conflict(BaseModel):
         return (
             self.id == other.id
             and self.conflict_type == other.conflict_type
-            and self.severity == other.severity
             and self.affected_nodes == other.affected_nodes
             and self.description == other.description
-            and self.events == other.events
             and self.context == other.context
             and self.resolved == other.resolved
             and self.resolution_strategy == other.resolution_strategy
@@ -89,10 +74,8 @@ class Conflict(BaseModel):
         return {
             "id": self.id,
             "conflict_type": str(self.conflict_type),
-            "severity": str(self.severity),
             "affected_nodes": self.affected_nodes,
             "description": self.description,
-            "events": [event.to_dict() for event in self.events],
             "context": self.context,
             "detected_at": self.detected_at.isoformat() if self.detected_at else None,
             "resolved": self.resolved,
@@ -119,8 +102,3 @@ class ConflictResolver(ABC):
         Returns:
             Resolution action description, or None if cannot resolve
         """
-
-    @property
-    @abstractmethod
-    def name(self) -> str:
-        """Get the name of this resolver."""
