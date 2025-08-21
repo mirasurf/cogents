@@ -12,6 +12,33 @@ from .models import OutputData
 
 
 class BaseVectorStore(ABC):
+    def __init__(self, embedding_model_dims: int):
+        """
+        Initialize the vector store.
+
+        Args:
+            embedding_model_dims: Expected dimensions for embedding vectors
+        """
+        self.embedding_model_dims = embedding_model_dims
+
+    def _validate_vector_dimensions(self, vectors: List[List[float]]) -> None:
+        """
+        Validate that all vectors have the expected dimensions.
+
+        Args:
+            vectors: List of vectors to validate
+
+        Raises:
+            ValueError: If any vector has incorrect dimensions
+        """
+        for i, vector in enumerate(vectors):
+            if len(vector) != self.embedding_model_dims:
+                raise ValueError(
+                    f"Vector at index {i} has {len(vector)} dimensions, "
+                    f"expected {self.embedding_model_dims}. "
+                    f"Check that your embedding model matches COGENTS_EMBEDDING_DIMS={self.embedding_model_dims}"
+                )
+
     @abstractmethod
     def create_col(self, vector_size: int, distance: str = "cosine") -> None:
         """Create a new collection."""

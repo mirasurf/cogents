@@ -47,6 +47,8 @@ class WeaviateVectorStore(BaseVectorStore):
             auth_config (dict, optional): Authentication configuration for Weaviate. Defaults to None.
             additional_headers (dict, optional): Additional headers for requests. Defaults to None.
         """
+        super().__init__(embedding_model_dims)
+
         if "localhost" in cluster_url:
             self.client = weaviate.connect_to_local(headers=additional_headers)
         else:
@@ -57,7 +59,6 @@ class WeaviateVectorStore(BaseVectorStore):
             )
 
         self.collection_name = collection_name
-        self.embedding_model_dims = embedding_model_dims
         self.create_col(embedding_model_dims)
 
     def _parse_output(self, data: Dict) -> List[OutputData]:
@@ -146,6 +147,9 @@ class WeaviateVectorStore(BaseVectorStore):
             payloads (list, optional): List of payloads corresponding to vectors. Defaults to None.
             ids (list, optional): List of IDs corresponding to vectors. Defaults to None.
         """
+        # Validate vector dimensions
+        self._validate_vector_dimensions(vectors)
+
         logger.info(f"Inserting {len(vectors)} vectors into collection {self.collection_name}")
         with self.client.batch.fixed_size(batch_size=100) as batch:
             for idx, vector in enumerate(vectors):

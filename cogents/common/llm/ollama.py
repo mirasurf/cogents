@@ -5,7 +5,7 @@ This module provides:
 - Chat completion using Ollama models
 - Image understanding using Ollama vision models
 - Instructor integration for structured output
-- LangSmith tracing for observability
+
 """
 
 import os
@@ -16,10 +16,24 @@ from typing import Any, Dict, List, Optional, Type, TypeVar, Union
 import ollama
 from instructor import Instructor, Mode, patch
 
-from cogents.common.langsmith import configure_langsmith, is_langsmith_enabled
+from cogents.common.consts import OLLAMA_EMBEDDING_MODEL, OLLAMA_GENERATIVE_MODEL
 from cogents.common.llm.base import BaseLLMClient
 from cogents.common.llm.token_tracker import estimate_token_usage, get_token_tracker
 from cogents.common.logging import get_logger
+
+from .opik_tracing import configure_opik
+
+# Only import OPIK if tracing is enabled
+OPIK_AVAILABLE = False
+track = lambda func: func  # Default no-op decorator
+if os.getenv("COGENTS_OPIK_TRACING", "false").lower() == "true":
+    try:
+        from opik import track
+
+        OPIK_AVAILABLE = True
+    except ImportError:
+        pass
+
 
 T = TypeVar("T")
 
@@ -36,6 +50,7 @@ class LLMClient(BaseLLMClient):
         instructor: bool = False,
         chat_model: Optional[str] = None,
         vision_model: Optional[str] = None,
+        embed_model: Optional[str] = None,
         **kwargs,
     ):
         """
@@ -45,13 +60,16 @@ class LLMClient(BaseLLMClient):
             base_url: Base URL for the Ollama API (defaults to http://localhost:11434)
             api_key: Not used for Ollama but kept for compatibility
             instructor: Whether to enable instructor for structured output
-            chat_model: Model to use for chat completions (defaults to llama3.2)
-            vision_model: Model to use for vision tasks (defaults to llava)
+            chat_model: Model to use for chat completions (defaults to gemma3:4b)
+            vision_model: Model to use for vision tasks (defaults to gemma3:4b)
             **kwargs: Additional arguments
         """
-        # Configure LangSmith tracing for observability
-        configure_langsmith()
-        self._langsmith_provider = "ollama"
+        # Configure Opik tracing for observability only if enabled
+        if OPIK_AVAILABLE:
+            configure_opik()
+            self._opik_provider = "ollama"
+        else:
+            self._opik_provider = None
 
         # Set base URL (defaults to Ollama default)
         self.base_url = base_url or os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
@@ -60,8 +78,9 @@ class LLMClient(BaseLLMClient):
         self.client = ollama.Client(host=self.base_url)
 
         # Model configurations
-        self.chat_model = chat_model or os.getenv("OLLAMA_CHAT_MODEL", "llama3.2")
-        self.vision_model = vision_model or os.getenv("OLLAMA_VISION_MODEL", "llava")
+        self.chat_model = chat_model or os.getenv("OLLAMA_CHAT_MODEL", OLLAMA_GENERATIVE_MODEL)
+        self.vision_model = vision_model or os.getenv("OLLAMA_VISION_MODEL", OLLAMA_GENERATIVE_MODEL)
+        self.embed_model = embed_model or os.getenv("OLLAMA_EMBED_MODEL", OLLAMA_EMBEDDING_MODEL)
 
         # Initialize instructor if requested
         self.instructor = None
@@ -84,6 +103,7 @@ class LLMClient(BaseLLMClient):
             except ImportError:
                 logger.warning("OpenAI package not available, structured completion will not work")
 
+    @track
     def completion(
         self,
         messages: List[Dict[str, str]],
@@ -105,12 +125,6 @@ class LLMClient(BaseLLMClient):
         Returns:
             Generated text response or streaming response
         """
-        # Add LangSmith metadata for completion tracing
-        if is_langsmith_enabled():
-            kwargs.setdefault("extra_headers", {})
-            kwargs["extra_headers"]["X-LangSmith-Model"] = self.chat_model
-            kwargs["extra_headers"]["X-LangSmith-Provider"] = self._langsmith_provider
-            kwargs["extra_headers"]["X-LangSmith-Type"] = "completion"
 
         try:
             options = {
@@ -146,6 +160,7 @@ class LLMClient(BaseLLMClient):
             logger.error(f"Error in Ollama completion: {e}")
             raise
 
+    @track
     def structured_completion(
         self,
         messages: List[Dict[str, str]],
@@ -173,14 +188,6 @@ class LLMClient(BaseLLMClient):
         """
         if not self.instructor:
             raise ValueError("Instructor is not enabled. Initialize LLMClient with instructor=True")
-
-        # Add LangSmith metadata for structured completion tracing
-        if is_langsmith_enabled():
-            kwargs.setdefault("extra_headers", {})
-            kwargs["extra_headers"]["X-LangSmith-Model"] = self.chat_model
-            kwargs["extra_headers"]["X-LangSmith-Provider"] = self._langsmith_provider
-            kwargs["extra_headers"]["X-LangSmith-Type"] = "structured"
-            kwargs["extra_headers"]["X-LangSmith-Response-Model"] = response_model.__name__
 
         last_err = None
         for i in range(attempts):
@@ -217,6 +224,7 @@ class LLMClient(BaseLLMClient):
                     raise
         raise last_err
 
+    @track
     def understand_image(
         self,
         image_path: Union[str, Path],
@@ -238,11 +246,6 @@ class LLMClient(BaseLLMClient):
         Returns:
             Analysis of the image
         """
-        if is_langsmith_enabled():
-            kwargs.setdefault("extra_headers", {})
-            kwargs["extra_headers"]["X-LangSmith-Model"] = self.vision_model
-            kwargs["extra_headers"]["X-LangSmith-Provider"] = self._langsmith_provider
-            kwargs["extra_headers"]["X-LangSmith-Type"] = "vision"
 
         try:
             # Read and encode the image
@@ -290,6 +293,7 @@ class LLMClient(BaseLLMClient):
             logger.error(f"Error analyzing image with Ollama: {e}")
             raise
 
+    @track
     def understand_image_from_url(
         self,
         image_url: str,
@@ -311,11 +315,6 @@ class LLMClient(BaseLLMClient):
         Returns:
             Analysis of the image
         """
-        if is_langsmith_enabled():
-            kwargs.setdefault("extra_headers", {})
-            kwargs["extra_headers"]["X-LangSmith-Model"] = self.vision_model
-            kwargs["extra_headers"]["X-LangSmith-Provider"] = self._langsmith_provider
-            kwargs["extra_headers"]["X-LangSmith-Type"] = "vision"
 
         try:
             import requests
@@ -374,10 +373,21 @@ class LLMClient(BaseLLMClient):
         """
         try:
             response = self.client.embeddings(
-                model=self.chat_model,
+                model=self.embed_model,
                 prompt=text,
             )
-            return response["embedding"]
+            embedding = response["embedding"]
+
+            # Validate embedding dimensions
+            expected_dims = self.get_embedding_dimensions()
+            if len(embedding) != expected_dims:
+                logger.warning(
+                    f"Embedding has {len(embedding)} dimensions, expected {expected_dims}. "
+                    f"Consider setting COGENTS_EMBEDDING_DIMS={len(embedding)} or "
+                    f"using a different embedding model."
+                )
+
+            return embedding
         except Exception as e:
             logger.error(f"Error generating embedding with Ollama: {e}")
             raise

@@ -117,3 +117,37 @@ Using `poetry run` ensures:
 - Proper virtual environment activation
 - Access to all project dependencies
 - Isolation from system Python packages
+
+
+## Environment Variables Documentation
+
+### Rule: Production-Only Environment Variables
+When creating or updating `env.example` files, **ONLY include environment variables that are actually used in production code**.
+
+**What to include:**
+- Environment variables used in `cogents/**/*.py` files
+- Variables that control runtime behavior of the application
+- Configuration variables that users need to set for production deployment
+
+**What to exclude:**
+- Environment variables only used in `examples/**/*.py` files
+- Variables only used in `tests/**/*.py` files
+- Variables only used in `thirdparty/**/*.py` files
+- Test-specific configuration variables
+- Example-specific configuration variables
+
+**How to verify:**
+1. Search for `os.getenv` and `os.environ` usage in production code
+2. Use pattern: `cogents/**/*.py` (exclude examples, tests, thirdparty)
+3. Only document variables that appear in production code search results
+
+**Example:**
+```bash
+# ✅ Include - used in production code
+grep_search query="os\.getenv|os\.environ" include_pattern="cogents/**/*.py" exclude_pattern="**/tests/**|**/examples/**|**/thirdparty/**"
+
+# ❌ Don't include - only used in examples/tests
+grep_search query="os\.getenv|os\.environ" include_pattern="examples/**/*.py"
+```
+
+This ensures that `env.example` files are accurate and only show variables that users actually need to configure in production environments.

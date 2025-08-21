@@ -42,8 +42,8 @@ ollama = "^0.5.3"
 llama-cpp-python = "^0.3.16"
 # LangGraph for workflow orchestration
 langgraph = "^0.5.4"
-# LangSmith for observability
-langsmith = "^0.3.45"
+# Opik for LLM observability and tracing
+opik = "^0.2.0"
 # Vector database
 weaviate-client = "^4.9.0"
 # Web search
@@ -59,7 +59,6 @@ colorlog = "^6.8.0"
 # Type hints
 typing-extensions = "^4.8.0"
 deprecated = "^1.2.18"
-pygraphviz = "^1.14"
 networkx = "^3.5"
 psycopg2 = "^2.9.10"
 

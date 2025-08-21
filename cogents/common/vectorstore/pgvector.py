@@ -48,10 +48,11 @@ class PGVectorStore(BaseVectorStore):
             diskann (bool, optional): Use DiskANN for faster search
             hnsw (bool, optional): Use HNSW for faster search
         """
+        super().__init__(embedding_model_dims)
+
         self.collection_name = collection_name
         self.use_diskann = diskann
         self.use_hnsw = hnsw
-        self.embedding_model_dims = embedding_model_dims
 
         self.conn = psycopg2.connect(dbname=dbname, user=user, password=password, host=host, port=port)
         self.cur = self.conn.cursor()
@@ -117,6 +118,9 @@ class PGVectorStore(BaseVectorStore):
             payloads (List[Dict], optional): List of payloads corresponding to vectors.
             ids (List[str], optional): List of IDs corresponding to vectors.
         """
+        # Validate vector dimensions
+        self._validate_vector_dimensions(vectors)
+
         logger.info(f"Inserting {len(vectors)} vectors into collection {self.collection_name}")
         json_payloads = [json.dumps(payload) for payload in payloads]
 

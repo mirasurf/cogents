@@ -1,6 +1,8 @@
+import os
 from typing import Optional
 
 from .base import BaseLLMClient
+from .litellm import LLMClient as LitellmLLMClient
 from .ollama import LLMClient as OllamaLLMClient
 from .openai import LLMClient as OpenAILLMClient
 from .openrouter import LLMClient as OpenRouterLLMClient
@@ -35,7 +37,7 @@ __all__ = [
 
 
 def get_llm_client(
-    provider: str = "openai",
+    provider: str = os.getenv("COGENTS_LLM_PROVIDER", "openai"),
     base_url: Optional[str] = None,
     api_key: Optional[str] = None,
     instructor: bool = False,
@@ -47,7 +49,7 @@ def get_llm_client(
     Get an LLM client instance based on the specified provider.
 
     Args:
-        provider: LLM provider to use ("openrouter", "openai", "ollama", "llamacpp")
+        provider: LLM provider to use ("openrouter", "openai", "ollama", "llamacpp", "litellm")
         base_url: Base URL for API (used by openai and ollama providers)
         api_key: API key for authentication (used by openai and openrouter providers)
         instructor: Whether to enable instructor for structured output
@@ -99,12 +101,23 @@ def get_llm_client(
             vision_model=vision_model,
             **kwargs,
         )
+    elif provider == "litellm":
+        return LitellmLLMClient(
+            base_url=base_url,
+            api_key=api_key,
+            instructor=instructor,
+            chat_model=chat_model,
+            vision_model=vision_model,
+            **kwargs,
+        )
     else:
-        raise ValueError(f"Unsupported provider: {provider}. Supported providers: openrouter, openai, ollama, llamacpp")
+        raise ValueError(
+            f"Unsupported provider: {provider}. Supported providers: openrouter, openai, ollama, llamacpp, litellm"
+        )
 
 
 def get_llm_client_instructor(
-    provider: str = "openai",
+    provider: str = os.getenv("COGENTS_LLM_PROVIDER", "openai"),
     base_url: Optional[str] = None,
     api_key: Optional[str] = None,
     chat_model: Optional[str] = None,
@@ -115,7 +128,7 @@ def get_llm_client_instructor(
     Get an LLM client instance with instructor support based on the specified provider.
 
     Args:
-        provider: LLM provider to use ("openrouter", "openai", "ollama", "llamacpp")
+        provider: LLM provider to use ("openrouter", "openai", "ollama", "llamacpp", "litellm")
         base_url: Base URL for API (used by openai and ollama providers)
         api_key: API key for authentication (used by openai and openrouter providers)
         chat_model: Model to use for chat completions

@@ -6,10 +6,23 @@ from typing import Any, Dict, List, Optional, Type, TypeVar, Union
 from huggingface_hub import snapshot_download
 from llama_cpp import Llama
 
-from cogents.common.langsmith import configure_langsmith
 from cogents.common.llm.base import BaseLLMClient
 from cogents.common.llm.token_tracker import estimate_token_usage, get_token_tracker
 from cogents.common.logging import get_logger
+
+from .opik_tracing import configure_opik
+
+# Only import OPIK if tracing is enabled
+OPIK_AVAILABLE = False
+track = lambda func: func  # Default no-op decorator
+if os.getenv("COGENTS_OPIK_TRACING", "false").lower() == "true":
+    try:
+        from opik import track
+
+        OPIK_AVAILABLE = True
+    except ImportError:
+        pass
+
 
 T = TypeVar("T")
 
@@ -70,6 +83,7 @@ class LLMClient(BaseLLMClient):
         instructor: bool = False,
         chat_model: Optional[str] = None,
         vision_model: Optional[str] = None,
+        embed_model: Optional[str] = None,
         n_ctx: int = 2048,
         n_gpu_layers: int = -1,
         **kwargs,
@@ -88,9 +102,12 @@ class LLMClient(BaseLLMClient):
             n_gpu_layers: Number of layers to offload to GPU (-1 for all)
             **kwargs: Additional arguments to pass to Llama constructor
         """
-        # Configure LangSmith tracing for observability
-        configure_langsmith()
-        self._langsmith_provider = "llamacpp"
+        # Configure Opik tracing for observability only if enabled
+        if OPIK_AVAILABLE:
+            configure_opik()
+            self._opik_provider = "llamacpp"
+        else:
+            self._opik_provider = None
 
         # Get model path from parameter or environment, or download default model
         self.model_path = model_path or os.getenv("LLAMACPP_MODEL_PATH")
@@ -120,12 +137,14 @@ class LLMClient(BaseLLMClient):
         model_filename = Path(self.model_path).stem
         self.chat_model = chat_model or os.getenv("LLAMACPP_CHAT_MODEL", model_filename)
         self.vision_model = vision_model or os.getenv("LLAMACPP_VISION_MODEL", model_filename)
+        self.embed_model = embed_model or os.getenv("LLAMACPP_EMBED_MODEL", model_filename)
 
         # Set instructor flag
         self.instructor_enabled = instructor
 
         logger.info(f"Initialized LlamaCpp client with model: {self.model_path}")
 
+    @track
     def completion(
         self,
         messages: List[Dict[str, str]],
@@ -179,6 +198,7 @@ class LLMClient(BaseLLMClient):
             logger.error(f"Error in chat completion: {e}")
             raise
 
+    @track
     def structured_completion(
         self,
         messages: List[Dict[str, str]],
@@ -378,7 +398,18 @@ class LLMClient(BaseLLMClient):
             embedding = self.llama.create_embedding(text)
 
             if "data" in embedding and len(embedding["data"]) > 0:
-                return embedding["data"][0]["embedding"]
+                embedding_vector = embedding["data"][0]["embedding"]
+
+                # Validate embedding dimensions
+                expected_dims = self.get_embedding_dimensions()
+                if len(embedding_vector) != expected_dims:
+                    logger.warning(
+                        f"Embedding has {len(embedding_vector)} dimensions, expected {expected_dims}. "
+                        f"Consider setting COGENTS_EMBEDDING_DIMS={len(embedding_vector)} or "
+                        f"using a different embedding model."
+                    )
+
+                return embedding_vector
             else:
                 raise ValueError("No embedding data returned from llama.cpp")
 

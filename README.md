@@ -1,7 +1,8 @@
 # Cogents
 
-[![ci](https://github.com/caesar0301/cogents/actions/workflows/ci.yml/badge.svg)](https://github.com/caesar0301/cogents/actions/workflows/ci.yml)
+[![CI](https://github.com/caesar0301/cogents/actions/workflows/ci.yml/badge.svg)](https://github.com/caesar0301/cogents/actions/workflows/ci.yml)
 [![PyPI version](https://img.shields.io/pypi/v/cogents.svg)](https://pypi.org/project/cogents/)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/caesar0301/cogents)
 
 A collection of essential, high-quality building blocks for constructing sophisticated multi-agent systems (MAS), with a primary focus on LangGraph. Not a full agentic framework, but a lightweight repository of key components to help bridge the last mile in MAS development.
 
@@ -18,7 +19,7 @@ Cogents offers a bunch of common modules for creating intelligent agent-based ap
 - **Web search capabilities** via Tavily and Google AI Search
 - **Semantic search** integrated semantic web search with Weaviate
 - **Voice processing** with smart voice features
-- **Observability** through LangSmith integration
+
 
 ## Install
 

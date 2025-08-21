@@ -13,7 +13,6 @@ from langgraph.types import Send
 
 from cogents.base.base import BaseResearcher
 from cogents.base.models import ResearchOutput
-from cogents.common.langsmith import configure_langsmith
 from cogents.common.logging import get_logger
 
 from .configuration import Configuration
@@ -65,9 +64,6 @@ class SeekraAgent(BaseResearcher):
         """
         # Initialize base class
         super().__init__(llm_provider=llm_provider, model_name=model_name)
-
-        # Ensure LangSmith is configured for observability
-        configure_langsmith()
 
         # Override the LLM client with instructor support if needed
         # Base class already initializes self.llm, so we can reuse it

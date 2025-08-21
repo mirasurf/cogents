@@ -5,7 +5,7 @@ This module provides:
 - Chat completion using various models via OpenAI-compatible endpoints
 - Image understanding using vision models
 - Instructor integration for structured output
-- LangSmith tracing for observability
+
 - Configurable base URL and API key for OpenAI-compatible services
 """
 
@@ -19,7 +19,6 @@ from typing import Any, Dict, List, Optional, Type, TypeVar, Union
 from instructor import Instructor, Mode, patch
 from openai import OpenAI
 
-from cogents.common.langsmith import configure_langsmith, is_langsmith_enabled
 from cogents.common.llm.base import BaseLLMClient
 from cogents.common.llm.token_tracker import (
     estimate_token_usage,
@@ -27,6 +26,22 @@ from cogents.common.llm.token_tracker import (
     get_token_tracker,
 )
 from cogents.common.logging import get_logger
+
+from .opik_tracing import configure_opik, is_opik_enabled
+
+# Only import OPIK if tracing is enabled
+OPIK_AVAILABLE = False
+track = lambda func: func  # Default no-op decorator
+track_openai = lambda client: client  # Default no-op function
+if os.getenv("COGENTS_OPIK_TRACING", "false").lower() == "true":
+    try:
+        from opik import track
+        from opik.integrations.openai import track_openai
+
+        OPIK_AVAILABLE = True
+    except ImportError:
+        pass
+
 
 T = TypeVar("T")
 
@@ -43,6 +58,7 @@ class LLMClient(BaseLLMClient):
         instructor: bool = False,
         chat_model: Optional[str] = None,
         vision_model: Optional[str] = None,
+        embed_model: Optional[str] = None,
         **kwargs,
     ):
         """
@@ -56,9 +72,12 @@ class LLMClient(BaseLLMClient):
             vision_model: Model to use for vision tasks (defaults to gpt-4-vision-preview)
             **kwargs: Additional arguments to pass to the LLM client
         """
-        # Configure LangSmith tracing for observability
-        configure_langsmith()
-        self._langsmith_provider = "openai"
+        # Configure Opik tracing for observability only if enabled
+        if OPIK_AVAILABLE:
+            configure_opik()
+            self._opik_provider = "openai"
+        else:
+            self._opik_provider = None
 
         # Set API key from parameter or environment
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
@@ -75,11 +94,15 @@ class LLMClient(BaseLLMClient):
         if self.base_url:
             client_kwargs["base_url"] = self.base_url
 
-        self.client = OpenAI(**client_kwargs)
+        base_client = OpenAI(**client_kwargs)
+
+        # Wrap with Opik tracking if available
+        self.client = track_openai(base_client) if OPIK_AVAILABLE and is_opik_enabled() else base_client
 
         # Model configurations
         self.chat_model = chat_model or os.getenv("OPENAI_CHAT_MODEL", "gpt-3.5-turbo")
         self.vision_model = vision_model or os.getenv("OPENAI_VISION_MODEL", "gpt-4-vision-preview")
+        self.embed_model = embed_model or os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
 
         # Initialize instructor if requested
         self.instructor = None
@@ -92,6 +115,7 @@ class LLMClient(BaseLLMClient):
                 mode=Mode.JSON,
             )
 
+    @track
     def completion(
         self,
         messages: List[Dict[str, str]],
@@ -113,10 +137,6 @@ class LLMClient(BaseLLMClient):
         Returns:
             Generated text response or streaming response
         """
-        if is_langsmith_enabled():
-            kwargs.setdefault("extra_headers", {})
-            kwargs["extra_headers"]["X-LangSmith-Model"] = self.chat_model
-            kwargs["extra_headers"]["X-LangSmith-Provider"] = self._langsmith_provider
 
         try:
             response = self.client.chat.completions.create(
@@ -137,6 +157,7 @@ class LLMClient(BaseLLMClient):
             logger.error(f"Error in chat completion: {e}")
             raise
 
+    @track
     def structured_completion(
         self,
         messages: List[Dict[str, str]],
@@ -164,14 +185,6 @@ class LLMClient(BaseLLMClient):
         """
         if not self.instructor:
             raise ValueError("Instructor is not enabled. Initialize LLMClient with instructor=True")
-
-        # Add LangSmith metadata for structured completion tracing
-        if is_langsmith_enabled():
-            kwargs.setdefault("extra_headers", {})
-            kwargs["extra_headers"]["X-LangSmith-Model"] = self.chat_model
-            kwargs["extra_headers"]["X-LangSmith-Provider"] = self._langsmith_provider
-            kwargs["extra_headers"]["X-LangSmith-Type"] = "structured"
-            kwargs["extra_headers"]["X-LangSmith-Response-Model"] = response_model.__name__
 
         last_err = None
         for i in range(attempts):
@@ -217,6 +230,7 @@ class LLMClient(BaseLLMClient):
                     raise
         raise last_err
 
+    @track
     def understand_image(
         self,
         image_path: Union[str, Path],
@@ -238,11 +252,6 @@ class LLMClient(BaseLLMClient):
         Returns:
             Analysis of the image
         """
-        if is_langsmith_enabled():
-            kwargs.setdefault("extra_headers", {})
-            kwargs["extra_headers"]["X-LangSmith-Model"] = self.vision_model
-            kwargs["extra_headers"]["X-LangSmith-Provider"] = self._langsmith_provider
-            kwargs["extra_headers"]["X-LangSmith-Type"] = "vision"
 
         try:
             # Read and encode the image
@@ -284,6 +293,7 @@ class LLMClient(BaseLLMClient):
             logger.error(f"Error analyzing image: {e}")
             raise
 
+    @track
     def understand_image_from_url(
         self,
         image_url: str,
@@ -305,11 +315,6 @@ class LLMClient(BaseLLMClient):
         Returns:
             Analysis of the image
         """
-        if is_langsmith_enabled():
-            kwargs.setdefault("extra_headers", {})
-            kwargs["extra_headers"]["X-LangSmith-Model"] = self.vision_model
-            kwargs["extra_headers"]["X-LangSmith-Provider"] = self._langsmith_provider
-            kwargs["extra_headers"]["X-LangSmith-Type"] = "vision-url"
 
         try:
             messages = [
@@ -363,12 +368,10 @@ class LLMClient(BaseLLMClient):
             List of embedding values
         """
         try:
-            # Use OpenAI's latest embedding model
-            embedding_model = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
-
             response = self.client.embeddings.create(
-                model=embedding_model,
+                model=self.embed_model,
                 input=text,
+                dimensions=self.get_embedding_dimensions(),
             )
 
             # Record token usage if available
@@ -378,7 +381,7 @@ class LLMClient(BaseLLMClient):
                         "prompt_tokens": response.usage.prompt_tokens,
                         "completion_tokens": 0,  # Embeddings don't have completion tokens
                         "total_tokens": response.usage.total_tokens,
-                        "model_name": embedding_model,
+                        "model_name": self.embed_model,
                         "call_type": "embedding",
                     }
                     from cogents.common.llm.token_tracker import TokenUsage
@@ -389,7 +392,18 @@ class LLMClient(BaseLLMClient):
             except Exception as e:
                 logger.debug(f"Could not track embedding token usage: {e}")
 
-            return response.data[0].embedding
+            embedding = response.data[0].embedding
+
+            # Validate embedding dimensions
+            expected_dims = self.get_embedding_dimensions()
+            if len(embedding) != expected_dims:
+                logger.warning(
+                    f"Embedding has {len(embedding)} dimensions, expected {expected_dims}. "
+                    f"Consider setting COGENTS_EMBEDDING_DIMS={len(embedding)} or "
+                    f"using a different embedding model."
+                )
+
+            return embedding
 
         except Exception as e:
             logger.error(f"Error generating embedding with OpenAI: {e}")
@@ -406,11 +420,10 @@ class LLMClient(BaseLLMClient):
             List of embedding lists
         """
         try:
-            embedding_model = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
-
             response = self.client.embeddings.create(
-                model=embedding_model,
+                model=self.embed_model,
                 input=chunks,
+                dimensions=self.get_embedding_dimensions(),
             )
 
             # Record token usage if available
@@ -420,7 +433,7 @@ class LLMClient(BaseLLMClient):
                         "prompt_tokens": response.usage.prompt_tokens,
                         "completion_tokens": 0,
                         "total_tokens": response.usage.total_tokens,
-                        "model_name": embedding_model,
+                        "model_name": self.embed_model,
                         "call_type": "embedding",
                     }
                     from cogents.common.llm.token_tracker import TokenUsage
@@ -431,7 +444,19 @@ class LLMClient(BaseLLMClient):
             except Exception as e:
                 logger.debug(f"Could not track batch embedding token usage: {e}")
 
-            return [item.embedding for item in response.data]
+            embeddings = [item.embedding for item in response.data]
+
+            # Validate embedding dimensions
+            expected_dims = self.get_embedding_dimensions()
+            for i, embedding in enumerate(embeddings):
+                if len(embedding) != expected_dims:
+                    logger.warning(
+                        f"Embedding at index {i} has {len(embedding)} dimensions, expected {expected_dims}. "
+                        f"Consider setting COGENTS_EMBEDDING_DIMS={len(embedding)} or "
+                        f"using a different embedding model."
+                    )
+
+            return embeddings
 
         except Exception as e:
             logger.error(f"Error generating batch embeddings with OpenAI: {e}")

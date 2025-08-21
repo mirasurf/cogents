@@ -6,16 +6,33 @@ This module provides:
 - Text embeddings using OpenAI text-embedding-3-small
 - Image understanding using vision models
 - Instructor integration for structured output
-- LangSmith tracing for observability
+
 """
 
 import os
-from typing import List, Optional, TypeVar
+from typing import Optional, TypeVar
 
 from cogents.common.consts import GEMINI_FLASH
 from cogents.common.llm.openai import LLMClient as OpenAILLMClient
+from cogents.common.logging import get_logger
+
+from .opik_tracing import configure_opik
+
+# Only import OPIK if tracing is enabled
+OPIK_AVAILABLE = False
+track = lambda func: func  # Default no-op decorator
+if os.getenv("COGENTS_OPIK_TRACING", "false").lower() == "true":
+    try:
+        pass
+
+        OPIK_AVAILABLE = True
+    except ImportError:
+        pass
+
 
 T = TypeVar("T")
+
+logger = get_logger(__name__)
 
 
 class LLMClient(OpenAILLMClient):
@@ -28,6 +45,7 @@ class LLMClient(OpenAILLMClient):
         instructor: bool = False,
         chat_model: Optional[str] = None,
         vision_model: Optional[str] = None,
+        embed_model: Optional[str] = None,
         **kwargs,
     ):
         """
@@ -52,6 +70,7 @@ class LLMClient(OpenAILLMClient):
         # Model configurations (can be overridden by environment variables)
         self.chat_model = chat_model or os.getenv("OPENROUTER_CHAT_MODEL", GEMINI_FLASH)
         self.vision_model = vision_model or os.getenv("OPENROUTER_VISION_MODEL", GEMINI_FLASH)
+        self.embed_model = embed_model or os.getenv("OPENROUTER_EMBED_MODEL", "text-embedding-3-small")
 
         super().__init__(
             base_url=self.base_url,
@@ -59,163 +78,13 @@ class LLMClient(OpenAILLMClient):
             instructor=instructor,
             chat_model=self.chat_model,
             vision_model=self.vision_model,
+            embed_model=self.embed_model,
             **kwargs,
         )
 
-        # Configure LangSmith tracing for observability
-        self._langsmith_provider = "openrouter"
-
-    def embed(self, text: str) -> List[float]:
-        """
-        Generate embeddings using OpenAI's embedding model through OpenRouter.
-
-        Note: OpenRouter doesn't directly support embeddings, so we use OpenAI's
-        embedding API directly for this functionality.
-
-        Args:
-            text: Text to embed
-
-        Returns:
-            List of embedding values
-        """
-        try:
-            # Use OpenAI directly for embeddings since OpenRouter doesn't support them
-            import openai
-
-            # Create a separate OpenAI client for embeddings
-            openai_api_key = os.getenv("OPENAI_API_KEY")
-            if not openai_api_key:
-                raise ValueError("OpenAI API key is required for embeddings. Set OPENAI_API_KEY environment variable.")
-
-            openai_client = openai.OpenAI(api_key=openai_api_key)
-            embedding_model = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
-
-            response = openai_client.embeddings.create(
-                model=embedding_model,
-                input=text,
-            )
-
-            # Record token usage if available
-            try:
-                if hasattr(response, "usage") and response.usage:
-                    usage_data = {
-                        "prompt_tokens": response.usage.prompt_tokens,
-                        "completion_tokens": 0,
-                        "total_tokens": response.usage.total_tokens,
-                        "model_name": embedding_model,
-                        "call_type": "embedding",
-                    }
-                    from cogents.common.llm.token_tracker import TokenUsage
-
-                    usage = TokenUsage(**usage_data)
-                    get_token_tracker().record_usage(usage)
-                    logger.debug(f"Token usage for embedding: {usage.total_tokens} tokens")
-            except Exception as e:
-                logger.debug(f"Could not track embedding token usage: {e}")
-
-            return response.data[0].embedding
-
-        except Exception as e:
-            logger.error(f"Error generating embedding with OpenRouter (via OpenAI): {e}")
-            raise
-
-    def embed_batch(self, chunks: List[str]) -> List[List[float]]:
-        """
-        Generate embeddings for multiple texts using OpenAI through OpenRouter.
-
-        Args:
-            chunks: List of texts to embed
-
-        Returns:
-            List of embedding lists
-        """
-        try:
-            import openai
-
-            openai_api_key = os.getenv("OPENAI_API_KEY")
-            if not openai_api_key:
-                raise ValueError("OpenAI API key is required for embeddings. Set OPENAI_API_KEY environment variable.")
-
-            openai_client = openai.OpenAI(api_key=openai_api_key)
-            embedding_model = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
-
-            response = openai_client.embeddings.create(
-                model=embedding_model,
-                input=chunks,
-            )
-
-            # Record token usage if available
-            try:
-                if hasattr(response, "usage") and response.usage:
-                    usage_data = {
-                        "prompt_tokens": response.usage.prompt_tokens,
-                        "completion_tokens": 0,
-                        "total_tokens": response.usage.total_tokens,
-                        "model_name": embedding_model,
-                        "call_type": "embedding",
-                    }
-                    from cogents.common.llm.token_tracker import TokenUsage
-
-                    usage = TokenUsage(**usage_data)
-                    get_token_tracker().record_usage(usage)
-                    logger.debug(f"Token usage for batch embedding: {usage.total_tokens} tokens")
-            except Exception as e:
-                logger.debug(f"Could not track batch embedding token usage: {e}")
-
-            return [item.embedding for item in response.data]
-
-        except Exception as e:
-            logger.error(f"Error generating batch embeddings with OpenRouter (via OpenAI): {e}")
-            # Fallback to individual calls
-            embeddings = []
-            for chunk in chunks:
-                embedding = self.embed(chunk)
-                embeddings.append(embedding)
-            return embeddings
-
-    def rerank(self, query: str, chunks: List[str]) -> List[str]:
-        """
-        Rerank chunks based on their relevance to the query using embeddings.
-
-        Uses OpenAI embeddings for similarity calculation since OpenRouter
-        doesn't have a native reranking API.
-
-        Args:
-            query: The query to rank against
-            chunks: List of text chunks to rerank
-
-        Returns:
-            Reranked list of chunks
-        """
-        try:
-            # Get embeddings for query and chunks
-            query_embedding = self.embed(query)
-            chunk_embeddings = self.embed_batch(chunks)
-
-            # Calculate cosine similarity
-            import math
-
-            def cosine_similarity(a: List[float], b: List[float]) -> float:
-                dot_product = sum(x * y for x, y in zip(a, b))
-                magnitude_a = math.sqrt(sum(x * x for x in a))
-                magnitude_b = math.sqrt(sum(x * x for x in b))
-                if magnitude_a == 0 or magnitude_b == 0:
-                    return 0
-                return dot_product / (magnitude_a * magnitude_b)
-
-            # Calculate similarities and sort
-            similarities = []
-            for i, chunk_embedding in enumerate(chunk_embeddings):
-                similarity = cosine_similarity(query_embedding, chunk_embedding)
-                similarities.append((similarity, i, chunks[i]))
-
-            # Sort by similarity (descending)
-            similarities.sort(key=lambda x: x[0], reverse=True)
-
-            # Return reranked chunks
-            return [chunk for _, _, chunk in similarities]
-
-        except Exception as e:
-            logger.error(f"Error reranking with OpenRouter: {e}")
-            # Fallback: return original order
-            return chunks
+        # Configure Opik tracing for observability only if enabled
+        if OPIK_AVAILABLE:
+            configure_opik()
+            self._opik_provider = "openrouter"
+        else:
+            self._opik_provider = None

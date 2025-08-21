@@ -1,6 +1,9 @@
+import os
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Type, TypeVar, Union
+
+from cogents.common.consts import DEFAULT_EMBEDDING_DIMS
 
 T = TypeVar("T")
 
@@ -127,3 +130,12 @@ class BaseLLMClient(ABC):
         chunks: List[str],
     ) -> List[str]:
         """Rerank chunks based on their relevance to the query"""
+
+    def get_embedding_dimensions(self) -> int:
+        """
+        Get the expected dimensions for embeddings from this provider.
+
+        Returns:
+            int: Expected embedding dimensions
+        """
+        return int(os.getenv("COGENTS_EMBEDDING_DIMS", str(DEFAULT_EMBEDDING_DIMS)))

@@ -12,7 +12,7 @@ from aliyunsdkcore.acs_exception.exceptions import ClientException, ServerExcept
 from aliyunsdkcore.client import AcsClient
 from aliyunsdkcore.request import CommonRequest
 
-from .base_smart_voice import SmartVoiceBase
+from .base import SmartVoiceBase
 
 
 class SmartVoice(SmartVoiceBase):
