@@ -3,12 +3,14 @@ Shared fixtures for goalith tests.
 """
 import pytest
 
+# Import only the base classes that don't trigger external dependencies
 from cogents.goalith.base.goal_node import GoalNode, NodeStatus, NodeType
 from cogents.goalith.base.graph_store import GraphStore
 from cogents.goalith.base.update_event import UpdateEvent, UpdateType
-from cogents.goalith.decomposer.registry import DecomposerRegistry
-from cogents.goalith.decomposer.simple_decomposer import SimpleListDecomposer
 from cogents.goalith.memory.inmemstore import InMemoryStore
+
+# Avoid importing decomposer modules that trigger LLM client initialization
+# We'll create mock fixtures instead
 
 
 @pytest.fixture
@@ -94,9 +96,26 @@ def memory_store():
 
 @pytest.fixture
 def decomposer_registry():
-    """Create a decomposer registry with basic decomposers."""
-    registry = DecomposerRegistry()
-    registry.register("simple", SimpleListDecomposer())
+    """Create a mock decomposer registry for testing."""
+
+    # Create a mock registry without importing the actual decomposer modules
+    class MockDecomposerRegistry:
+        def __init__(self):
+            self._decomposers = {}
+
+        def register(self, name, decomposer):
+            self._decomposers[name] = decomposer
+
+        def get(self, name):
+            return self._decomposers.get(name)
+
+        def list(self):
+            return list(self._decomposers.keys())
+
+    registry = MockDecomposerRegistry()
+    # Register mock decomposers instead of real ones
+    registry.register("simple", "mock_simple_decomposer")
+    registry.register("human", "mock_human_decomposer")
     return registry
 
 
