@@ -75,6 +75,7 @@ class LLMClient(BaseLLMClient):
         if instructor:
             try:
                 from openai import OpenAI
+
                 # Create a mock client for instructor
                 mock_client = OpenAI(
                     api_key="litellm",
@@ -136,15 +137,16 @@ class LLMClient(BaseLLMClient):
             else:
                 # Extract token usage if available
                 try:
-                    if hasattr(response, 'usage') and response.usage:
+                    if hasattr(response, "usage") and response.usage:
                         usage_data = {
                             "prompt_tokens": response.usage.prompt_tokens,
                             "completion_tokens": response.usage.completion_tokens,
                             "total_tokens": response.usage.total_tokens,
                             "model_name": self.chat_model,
-                            "call_type": "completion"
+                            "call_type": "completion",
                         }
                         from cogents.common.llm.token_tracker import TokenUsage
+
                         usage = TokenUsage(**usage_data)
                         get_token_tracker().record_usage(usage)
                         logger.debug(f"Token usage for completion: {usage.total_tokens} tokens")
@@ -210,7 +212,7 @@ class LLMClient(BaseLLMClient):
                     schema_prompt = f"Respond with JSON matching this schema: {response_model.model_json_schema()}"
                 else:
                     schema_prompt = f"Respond with JSON matching this Pydantic model: {response_model.__name__}"
-                
+
                 # Add schema instruction to the last user message or create a new one
                 if structured_messages and structured_messages[-1]["role"] == "user":
                     structured_messages[-1]["content"] += f"\n\n{schema_prompt}"
@@ -228,6 +230,7 @@ class LLMClient(BaseLLMClient):
 
                 # Parse the JSON response into the Pydantic model
                 import json
+
                 response_text = response.choices[0].message.content
                 response_json = json.loads(response_text)
                 result = response_model.model_validate(response_json)
@@ -288,12 +291,12 @@ class LLMClient(BaseLLMClient):
 
             with open(image_path, "rb") as image_file:
                 image_data = image_file.read()
-                image_base64 = base64.b64encode(image_data).decode('utf-8')
+                image_base64 = base64.b64encode(image_data).decode("utf-8")
 
             # Determine the image format
-            image_format = image_path.suffix.lower().lstrip('.')
-            if image_format == 'jpg':
-                image_format = 'jpeg'
+            image_format = image_path.suffix.lower().lstrip(".")
+            if image_format == "jpg":
+                image_format = "jpeg"
 
             # Prepare the message with image
             messages = [
@@ -301,10 +304,7 @@ class LLMClient(BaseLLMClient):
                     "role": "user",
                     "content": [
                         {"type": "text", "text": prompt},
-                        {
-                            "type": "image_url",
-                            "image_url": {"url": f"data:image/{image_format};base64,{image_base64}"}
-                        },
+                        {"type": "image_url", "image_url": {"url": f"data:image/{image_format};base64,{image_base64}"}},
                     ],
                 }
             ]
@@ -407,14 +407,14 @@ class LLMClient(BaseLLMClient):
         try:
             # Use a default embedding model or one specified in environment
             embedding_model = os.getenv("LITELLM_EMBEDDING_MODEL", "text-embedding-ada-002")
-            
+
             response = litellm.embedding(
                 model=embedding_model,
                 input=[text],
             )
-            
+
             return response.data[0].embedding
-            
+
         except Exception as e:
             logger.error(f"Error generating embedding with LiteLLM: {e}")
             raise
@@ -432,14 +432,14 @@ class LLMClient(BaseLLMClient):
         try:
             # Use a default embedding model or one specified in environment
             embedding_model = os.getenv("LITELLM_EMBEDDING_MODEL", "text-embedding-ada-002")
-            
+
             response = litellm.embedding(
                 model=embedding_model,
                 input=chunks,
             )
-            
+
             return [item.embedding for item in response.data]
-            
+
         except Exception as e:
             logger.error(f"Error generating batch embeddings with LiteLLM: {e}")
             # Fallback to individual calls
@@ -452,7 +452,7 @@ class LLMClient(BaseLLMClient):
     def rerank(self, query: str, chunks: List[str]) -> List[str]:
         """
         Rerank chunks based on their relevance to the query.
-        
+
         Note: LiteLLM doesn't have a native reranking API, so this implementation
         uses a simple similarity-based approach with embeddings.
 

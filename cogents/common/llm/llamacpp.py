@@ -363,7 +363,7 @@ class LLMClient(BaseLLMClient):
     def embed(self, text: str) -> List[float]:
         """
         Generate embeddings using llama.cpp.
-        
+
         Note: This requires the model to support embeddings. Many GGUF models
         can generate embeddings through llama.cpp.
 
@@ -376,15 +376,17 @@ class LLMClient(BaseLLMClient):
         try:
             # Use llama.cpp's embedding functionality
             embedding = self.llama.create_embedding(text)
-            
-            if 'data' in embedding and len(embedding['data']) > 0:
-                return embedding['data'][0]['embedding']
+
+            if "data" in embedding and len(embedding["data"]) > 0:
+                return embedding["data"][0]["embedding"]
             else:
                 raise ValueError("No embedding data returned from llama.cpp")
-                
+
         except Exception as e:
             logger.error(f"Error generating embedding with llama.cpp: {e}")
-            logger.warning("Make sure your model supports embeddings. Consider using a different provider for embeddings.")
+            logger.warning(
+                "Make sure your model supports embeddings. Consider using a different provider for embeddings."
+            )
             raise
 
     def embed_batch(self, chunks: List[str]) -> List[List[float]]:
@@ -403,7 +405,7 @@ class LLMClient(BaseLLMClient):
                 embedding = self.embed(chunk)
                 embeddings.append(embedding)
             return embeddings
-            
+
         except Exception as e:
             logger.error(f"Error generating batch embeddings with llama.cpp: {e}")
             raise
@@ -411,7 +413,7 @@ class LLMClient(BaseLLMClient):
     def rerank(self, query: str, chunks: List[str]) -> List[str]:
         """
         Rerank chunks based on their relevance to the query.
-        
+
         This implementation uses embeddings to calculate similarity scores.
         If embeddings are not available, it falls back to a simple text-based approach.
 
@@ -453,20 +455,21 @@ class LLMClient(BaseLLMClient):
         except Exception as e:
             logger.warning(f"Embedding-based reranking failed: {e}")
             logger.info("Falling back to simple text-based reranking")
-            
+
             # Fallback: simple text-based similarity
             try:
+
                 def simple_text_similarity(query: str, text: str) -> float:
                     """Simple text similarity based on common words."""
                     query_words = set(query.lower().split())
                     text_words = set(text.lower().split())
-                    
+
                     if not query_words or not text_words:
                         return 0.0
-                    
+
                     intersection = query_words.intersection(text_words)
                     union = query_words.union(text_words)
-                    
+
                     return len(intersection) / len(union) if union else 0.0
 
                 # Calculate text similarities and sort
@@ -480,7 +483,7 @@ class LLMClient(BaseLLMClient):
 
                 # Return reranked chunks
                 return [chunk for _, _, chunk in similarities]
-                
+
             except Exception as fallback_error:
                 logger.error(f"Fallback reranking also failed: {fallback_error}")
                 # Last resort: return original order

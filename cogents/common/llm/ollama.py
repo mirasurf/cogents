@@ -8,7 +8,6 @@ This module provides:
 - LangSmith tracing for observability
 """
 
-import base64
 import os
 import time
 from pathlib import Path
@@ -70,6 +69,7 @@ class LLMClient(BaseLLMClient):
             # Create a mock OpenAI-compatible client for instructor
             try:
                 from openai import OpenAI
+
                 # Create a mock client that uses Ollama through OpenAI-compatible API
                 mock_client = OpenAI(
                     base_url=f"{self.base_url}/v1",
@@ -401,7 +401,7 @@ class LLMClient(BaseLLMClient):
     def rerank(self, query: str, chunks: List[str]) -> List[str]:
         """
         Rerank chunks based on their relevance to the query.
-        
+
         Note: Ollama doesn't have a native reranking API, so this implementation
         uses a simple similarity-based approach with embeddings.
 

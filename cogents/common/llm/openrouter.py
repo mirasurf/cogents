@@ -68,7 +68,7 @@ class LLMClient(OpenAILLMClient):
     def embed(self, text: str) -> List[float]:
         """
         Generate embeddings using OpenAI's embedding model through OpenRouter.
-        
+
         Note: OpenRouter doesn't directly support embeddings, so we use OpenAI's
         embedding API directly for this functionality.
 
@@ -81,41 +81,40 @@ class LLMClient(OpenAILLMClient):
         try:
             # Use OpenAI directly for embeddings since OpenRouter doesn't support them
             import openai
-            
+
             # Create a separate OpenAI client for embeddings
             openai_api_key = os.getenv("OPENAI_API_KEY")
             if not openai_api_key:
-                raise ValueError(
-                    "OpenAI API key is required for embeddings. Set OPENAI_API_KEY environment variable."
-                )
-            
+                raise ValueError("OpenAI API key is required for embeddings. Set OPENAI_API_KEY environment variable.")
+
             openai_client = openai.OpenAI(api_key=openai_api_key)
             embedding_model = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
-            
+
             response = openai_client.embeddings.create(
                 model=embedding_model,
                 input=text,
             )
-            
+
             # Record token usage if available
             try:
-                if hasattr(response, 'usage') and response.usage:
+                if hasattr(response, "usage") and response.usage:
                     usage_data = {
                         "prompt_tokens": response.usage.prompt_tokens,
                         "completion_tokens": 0,
                         "total_tokens": response.usage.total_tokens,
                         "model_name": embedding_model,
-                        "call_type": "embedding"
+                        "call_type": "embedding",
                     }
                     from cogents.common.llm.token_tracker import TokenUsage
+
                     usage = TokenUsage(**usage_data)
                     get_token_tracker().record_usage(usage)
                     logger.debug(f"Token usage for embedding: {usage.total_tokens} tokens")
             except Exception as e:
                 logger.debug(f"Could not track embedding token usage: {e}")
-            
+
             return response.data[0].embedding
-            
+
         except Exception as e:
             logger.error(f"Error generating embedding with OpenRouter (via OpenAI): {e}")
             raise
@@ -132,40 +131,39 @@ class LLMClient(OpenAILLMClient):
         """
         try:
             import openai
-            
+
             openai_api_key = os.getenv("OPENAI_API_KEY")
             if not openai_api_key:
-                raise ValueError(
-                    "OpenAI API key is required for embeddings. Set OPENAI_API_KEY environment variable."
-                )
-            
+                raise ValueError("OpenAI API key is required for embeddings. Set OPENAI_API_KEY environment variable.")
+
             openai_client = openai.OpenAI(api_key=openai_api_key)
             embedding_model = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
-            
+
             response = openai_client.embeddings.create(
                 model=embedding_model,
                 input=chunks,
             )
-            
+
             # Record token usage if available
             try:
-                if hasattr(response, 'usage') and response.usage:
+                if hasattr(response, "usage") and response.usage:
                     usage_data = {
                         "prompt_tokens": response.usage.prompt_tokens,
                         "completion_tokens": 0,
                         "total_tokens": response.usage.total_tokens,
                         "model_name": embedding_model,
-                        "call_type": "embedding"
+                        "call_type": "embedding",
                     }
                     from cogents.common.llm.token_tracker import TokenUsage
+
                     usage = TokenUsage(**usage_data)
                     get_token_tracker().record_usage(usage)
                     logger.debug(f"Token usage for batch embedding: {usage.total_tokens} tokens")
             except Exception as e:
                 logger.debug(f"Could not track batch embedding token usage: {e}")
-            
+
             return [item.embedding for item in response.data]
-            
+
         except Exception as e:
             logger.error(f"Error generating batch embeddings with OpenRouter (via OpenAI): {e}")
             # Fallback to individual calls
@@ -178,7 +176,7 @@ class LLMClient(OpenAILLMClient):
     def rerank(self, query: str, chunks: List[str]) -> List[str]:
         """
         Rerank chunks based on their relevance to the query using embeddings.
-        
+
         Uses OpenAI embeddings for similarity calculation since OpenRouter
         doesn't have a native reranking API.
 
