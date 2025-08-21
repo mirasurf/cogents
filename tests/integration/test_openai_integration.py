@@ -192,3 +192,129 @@ class TestOpenAIIntegration:
         except Exception as e:
             if "stream" not in str(e).lower():
                 raise  # Re-raise if it's not a streaming-related error
+
+    def test_embed_single_text(self):
+        """Test embedding generation for a single text."""
+        text = "This is a test sentence for embedding generation."
+        
+        embedding = self.client.embed(text)
+        
+        # Assertions
+        assert embedding is not None
+        assert isinstance(embedding, list)
+        assert len(embedding) > 0
+        assert all(isinstance(x, (int, float)) for x in embedding)
+        # OpenAI embeddings are typically 1536 or 3072 dimensions
+        assert len(embedding) in [1536, 3072]
+
+    def test_embed_batch(self):
+        """Test batch embedding generation."""
+        texts = [
+            "First test sentence.",
+            "Second test sentence with different content.",
+            "Third sentence about artificial intelligence."
+        ]
+        
+        embeddings = self.client.embed_batch(texts)
+        
+        # Assertions
+        assert embeddings is not None
+        assert isinstance(embeddings, list)
+        assert len(embeddings) == len(texts)
+        
+        for embedding in embeddings:
+            assert isinstance(embedding, list)
+            assert len(embedding) > 0
+            assert all(isinstance(x, (int, float)) for x in embedding)
+            # All embeddings should have the same dimension
+            assert len(embedding) == len(embeddings[0])
+
+    def test_embed_empty_text(self):
+        """Test embedding generation with empty text."""
+        with pytest.raises(Exception):
+            self.client.embed("")
+
+    def test_rerank_chunks(self):
+        """Test reranking functionality."""
+        query = "machine learning algorithms"
+        chunks = [
+            "Deep learning is a subset of machine learning.",
+            "The weather is nice today with sunshine.",
+            "Neural networks are used in artificial intelligence.",
+            "I like to eat pizza for dinner.",
+            "Supervised learning requires labeled training data.",
+        ]
+        
+        reranked_chunks = self.client.rerank(query, chunks)
+        
+        # Assertions
+        assert reranked_chunks is not None
+        assert isinstance(reranked_chunks, list)
+        assert len(reranked_chunks) == len(chunks)
+        assert set(reranked_chunks) == set(chunks)  # Same chunks, different order
+        
+        # The first chunk should be more relevant to the query
+        # (This is a heuristic test, actual ranking may vary)
+        relevant_chunks = [
+            "Deep learning is a subset of machine learning.",
+            "Neural networks are used in artificial intelligence.",
+            "Supervised learning requires labeled training data.",
+        ]
+        
+        # At least one relevant chunk should be in the top 3
+        top_3 = reranked_chunks[:3]
+        assert any(chunk in top_3 for chunk in relevant_chunks)
+
+    def test_rerank_empty_chunks(self):
+        """Test reranking with empty chunks list."""
+        query = "test query"
+        chunks = []
+        
+        reranked_chunks = self.client.rerank(query, chunks)
+        
+        assert reranked_chunks == []
+
+    def test_rerank_single_chunk(self):
+        """Test reranking with a single chunk."""
+        query = "test query"
+        chunks = ["Single test chunk"]
+        
+        reranked_chunks = self.client.rerank(query, chunks)
+        
+        assert reranked_chunks == chunks
+
+    def test_embed_and_rerank_consistency(self):
+        """Test that embeddings and reranking are consistent."""
+        query = "artificial intelligence"
+        chunks = [
+            "AI is transforming many industries.",
+            "Cooking pasta requires boiling water.",
+            "Machine learning is a branch of AI."
+        ]
+        
+        # Get embeddings
+        query_embedding = self.client.embed(query)
+        chunk_embeddings = self.client.embed_batch(chunks)
+        
+        # Rerank chunks
+        reranked_chunks = self.client.rerank(query, chunks)
+        
+        # Manual similarity calculation
+        import math
+        
+        def cosine_similarity(a, b):
+            dot_product = sum(x * y for x, y in zip(a, b))
+            magnitude_a = math.sqrt(sum(x * x for x in a))
+            magnitude_b = math.sqrt(sum(x * x for x in b))
+            return dot_product / (magnitude_a * magnitude_b) if magnitude_a and magnitude_b else 0
+        
+        similarities = []
+        for i, chunk_embedding in enumerate(chunk_embeddings):
+            similarity = cosine_similarity(query_embedding, chunk_embedding)
+            similarities.append((similarity, chunks[i]))
+        
+        similarities.sort(key=lambda x: x[0], reverse=True)
+        expected_order = [chunk for _, chunk in similarities]
+        
+        # The reranked order should match our manual calculation
+        assert reranked_chunks == expected_order

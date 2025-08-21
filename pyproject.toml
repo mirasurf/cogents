@@ -35,6 +35,9 @@ langchain-core = "^0.3.72"
 langchain-text-splitters = "^0.3.0"
 langchain-tavily = "^0.2.11"
 langchain-ollama = "^0.2.0"
+# LLM providers
+litellm = "^1.0.0"
+ollama = "^0.3.0"
 # Local LLM support
 llama-cpp-python = "^0.3.16"
 # LangGraph for workflow orchestration

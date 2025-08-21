@@ -361,12 +361,127 @@ class LLMClient(BaseLLMClient):
             logger.debug(f"Could not estimate token usage: {e}")
 
     def embed(self, text: str) -> List[float]:
-        """Generate embeddings for input text"""
-        raise NotImplementedError("Embedding is not supported by the llamacpp provider")
+        """
+        Generate embeddings using llama.cpp.
+        
+        Note: This requires the model to support embeddings. Many GGUF models
+        can generate embeddings through llama.cpp.
+
+        Args:
+            text: Text to embed
+
+        Returns:
+            List of embedding values
+        """
+        try:
+            # Use llama.cpp's embedding functionality
+            embedding = self.llama.create_embedding(text)
+            
+            if 'data' in embedding and len(embedding['data']) > 0:
+                return embedding['data'][0]['embedding']
+            else:
+                raise ValueError("No embedding data returned from llama.cpp")
+                
+        except Exception as e:
+            logger.error(f"Error generating embedding with llama.cpp: {e}")
+            logger.warning("Make sure your model supports embeddings. Consider using a different provider for embeddings.")
+            raise
 
     def embed_batch(self, chunks: List[str]) -> List[List[float]]:
-        """Generate embeddings for input text"""
-        raise NotImplementedError("Embedding is not supported by the llamacpp provider")
+        """
+        Generate embeddings for multiple texts using llama.cpp.
+
+        Args:
+            chunks: List of texts to embed
+
+        Returns:
+            List of embedding lists
+        """
+        try:
+            embeddings = []
+            for chunk in chunks:
+                embedding = self.embed(chunk)
+                embeddings.append(embedding)
+            return embeddings
+            
+        except Exception as e:
+            logger.error(f"Error generating batch embeddings with llama.cpp: {e}")
+            raise
 
     def rerank(self, query: str, chunks: List[str]) -> List[str]:
-        raise NotImplementedError("Reranking is not supported by the llamacpp provider")
+        """
+        Rerank chunks based on their relevance to the query.
+        
+        This implementation uses embeddings to calculate similarity scores.
+        If embeddings are not available, it falls back to a simple text-based approach.
+
+        Args:
+            query: The query to rank against
+            chunks: List of text chunks to rerank
+
+        Returns:
+            Reranked list of chunks
+        """
+        try:
+            # Try to use embeddings for reranking
+            query_embedding = self.embed(query)
+            chunk_embeddings = self.embed_batch(chunks)
+
+            # Calculate cosine similarity
+            import math
+
+            def cosine_similarity(a: List[float], b: List[float]) -> float:
+                dot_product = sum(x * y for x, y in zip(a, b))
+                magnitude_a = math.sqrt(sum(x * x for x in a))
+                magnitude_b = math.sqrt(sum(x * x for x in b))
+                if magnitude_a == 0 or magnitude_b == 0:
+                    return 0
+                return dot_product / (magnitude_a * magnitude_b)
+
+            # Calculate similarities and sort
+            similarities = []
+            for i, chunk_embedding in enumerate(chunk_embeddings):
+                similarity = cosine_similarity(query_embedding, chunk_embedding)
+                similarities.append((similarity, i, chunks[i]))
+
+            # Sort by similarity (descending)
+            similarities.sort(key=lambda x: x[0], reverse=True)
+
+            # Return reranked chunks
+            return [chunk for _, _, chunk in similarities]
+
+        except Exception as e:
+            logger.warning(f"Embedding-based reranking failed: {e}")
+            logger.info("Falling back to simple text-based reranking")
+            
+            # Fallback: simple text-based similarity
+            try:
+                def simple_text_similarity(query: str, text: str) -> float:
+                    """Simple text similarity based on common words."""
+                    query_words = set(query.lower().split())
+                    text_words = set(text.lower().split())
+                    
+                    if not query_words or not text_words:
+                        return 0.0
+                    
+                    intersection = query_words.intersection(text_words)
+                    union = query_words.union(text_words)
+                    
+                    return len(intersection) / len(union) if union else 0.0
+
+                # Calculate text similarities and sort
+                similarities = []
+                for i, chunk in enumerate(chunks):
+                    similarity = simple_text_similarity(query, chunk)
+                    similarities.append((similarity, i, chunk))
+
+                # Sort by similarity (descending)
+                similarities.sort(key=lambda x: x[0], reverse=True)
+
+                # Return reranked chunks
+                return [chunk for _, _, chunk in similarities]
+                
+            except Exception as fallback_error:
+                logger.error(f"Fallback reranking also failed: {fallback_error}")
+                # Last resort: return original order
+                return chunks
