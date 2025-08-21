@@ -110,12 +110,19 @@ class LLMDecomposer(GoalDecomposer):
         self._name = name
         self._domain_context = domain_context or {}
         self._include_historical = include_historical_patterns
-        self._llm_client = get_llm_client_instructor(provider=provider, chat_model=model_name)
+        self._llm_client = None  # Lazy initialization
 
     @property
     def name(self) -> str:
         """Get the name of this decomposer."""
         return self._name
+
+    @property
+    def llm_client(self):
+        """Lazily initialize and return the LLM client."""
+        if self._llm_client is None:
+            self._llm_client = get_llm_client_instructor(provider=self._provider, chat_model=self._model_name)
+        return self._llm_client
 
     def decompose(self, goal_node: GoalNode, context: Optional[Dict[str, Any]] = None) -> List[GoalNode]:
         """
@@ -146,7 +153,7 @@ class LLMDecomposer(GoalDecomposer):
             # Get structured decomposition from LLM with system and user messages
             messages = [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}]
 
-            decomposition: GoalDecomposition = self._llm_client.structured_completion(
+            decomposition: GoalDecomposition = self.llm_client.structured_completion(
                 messages=messages,
                 response_model=GoalDecomposition,
                 temperature=self._temperature,
@@ -207,7 +214,7 @@ class LLMDecomposer(GoalDecomposer):
 
         # Get simple text response
         messages = [{"role": "user", "content": combined_prompt}]
-        response = self._llm_client.completion(
+        response = self.llm_client.completion(
             messages=messages,
             temperature=self._temperature,
             max_tokens=self._max_tokens,
