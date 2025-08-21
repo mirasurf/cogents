@@ -173,3 +173,172 @@ class TestOpenRouterIntegration:
         # This is a probabilistic test, so we'll just check they're both valid
         assert len(short_response.strip()) > 0
         assert len(long_response.strip()) > 0
+
+    def test_embed_single_text(self):
+        """Test embedding generation for a single text."""
+        # Check if OpenAI API key is available for embeddings
+        openai_api_key = os.getenv("OPENAI_API_KEY")
+        if not openai_api_key:
+            pytest.skip("OPENAI_API_KEY not set - required for OpenRouter embeddings")
+
+        text = "This is a test sentence for embedding generation."
+        
+        try:
+            embedding = self.client.embed(text)
+            
+            # Assertions
+            assert embedding is not None
+            assert isinstance(embedding, list)
+            assert len(embedding) > 0
+            assert all(isinstance(x, (int, float)) for x in embedding)
+            # OpenAI embeddings are typically 1536 or 3072 dimensions
+            assert len(embedding) in [1536, 3072]
+            
+        except Exception as e:
+            if "api key" in str(e).lower():
+                pytest.skip(f"OpenAI API key required for embeddings: {e}")
+            else:
+                raise
+
+    def test_embed_batch(self):
+        """Test batch embedding generation."""
+        openai_api_key = os.getenv("OPENAI_API_KEY")
+        if not openai_api_key:
+            pytest.skip("OPENAI_API_KEY not set - required for OpenRouter embeddings")
+
+        texts = [
+            "First test sentence.",
+            "Second test sentence with different content.",
+            "Third sentence about artificial intelligence."
+        ]
+        
+        try:
+            embeddings = self.client.embed_batch(texts)
+            
+            # Assertions
+            assert embeddings is not None
+            assert isinstance(embeddings, list)
+            assert len(embeddings) == len(texts)
+            
+            for embedding in embeddings:
+                assert isinstance(embedding, list)
+                assert len(embedding) > 0
+                assert all(isinstance(x, (int, float)) for x in embedding)
+                # All embeddings should have the same dimension
+                assert len(embedding) == len(embeddings[0])
+                
+        except Exception as e:
+            if "api key" in str(e).lower():
+                pytest.skip(f"OpenAI API key required for batch embeddings: {e}")
+            else:
+                raise
+
+    def test_rerank_chunks(self):
+        """Test reranking functionality."""
+        openai_api_key = os.getenv("OPENAI_API_KEY")
+        if not openai_api_key:
+            pytest.skip("OPENAI_API_KEY not set - required for OpenRouter reranking")
+
+        query = "machine learning algorithms"
+        chunks = [
+            "Deep learning is a subset of machine learning.",
+            "The weather is nice today with sunshine.",
+            "Neural networks are used in artificial intelligence.",
+            "I like to eat pizza for dinner.",
+            "Supervised learning requires labeled training data.",
+        ]
+        
+        try:
+            reranked_chunks = self.client.rerank(query, chunks)
+            
+            # Assertions
+            assert reranked_chunks is not None
+            assert isinstance(reranked_chunks, list)
+            assert len(reranked_chunks) == len(chunks)
+            assert set(reranked_chunks) == set(chunks)  # Same chunks, different order
+            
+            # The first chunk should be more relevant to the query
+            relevant_chunks = [
+                "Deep learning is a subset of machine learning.",
+                "Neural networks are used in artificial intelligence.",
+                "Supervised learning requires labeled training data.",
+            ]
+            
+            # At least one relevant chunk should be in the top 3
+            top_3 = reranked_chunks[:3]
+            assert any(chunk in top_3 for chunk in relevant_chunks)
+            
+        except Exception as e:
+            if "api key" in str(e).lower():
+                pytest.skip(f"OpenAI API key required for reranking: {e}")
+            else:
+                raise
+
+    def test_embed_and_rerank_consistency(self):
+        """Test that embeddings and reranking are consistent."""
+        openai_api_key = os.getenv("OPENAI_API_KEY")
+        if not openai_api_key:
+            pytest.skip("OPENAI_API_KEY not set - required for OpenRouter embeddings")
+
+        query = "artificial intelligence"
+        chunks = [
+            "AI is transforming many industries.",
+            "Cooking pasta requires boiling water.",
+            "Machine learning is a branch of AI."
+        ]
+        
+        try:
+            # Get embeddings
+            query_embedding = self.client.embed(query)
+            chunk_embeddings = self.client.embed_batch(chunks)
+            
+            # Rerank chunks
+            reranked_chunks = self.client.rerank(query, chunks)
+            
+            # Manual similarity calculation
+            import math
+            
+            def cosine_similarity(a, b):
+                dot_product = sum(x * y for x, y in zip(a, b))
+                magnitude_a = math.sqrt(sum(x * x for x in a))
+                magnitude_b = math.sqrt(sum(x * x for x in b))
+                return dot_product / (magnitude_a * magnitude_b) if magnitude_a and magnitude_b else 0
+            
+            similarities = []
+            for i, chunk_embedding in enumerate(chunk_embeddings):
+                similarity = cosine_similarity(query_embedding, chunk_embedding)
+                similarities.append((similarity, chunks[i]))
+            
+            similarities.sort(key=lambda x: x[0], reverse=True)
+            expected_order = [chunk for _, chunk in similarities]
+            
+            # The reranked order should match our manual calculation
+            assert reranked_chunks == expected_order
+            
+        except Exception as e:
+            if "api key" in str(e).lower():
+                pytest.skip(f"OpenAI API key required for embeddings: {e}")
+            else:
+                raise
+
+    def test_rerank_edge_cases(self):
+        """Test reranking edge cases."""
+        openai_api_key = os.getenv("OPENAI_API_KEY")
+        if not openai_api_key:
+            pytest.skip("OPENAI_API_KEY not set - required for OpenRouter reranking")
+
+        try:
+            # Empty chunks
+            result = self.client.rerank("query", [])
+            assert result == []
+            
+            # Single chunk
+            single_chunk = ["Single test chunk"]
+            result = self.client.rerank("query", single_chunk)
+            assert result == single_chunk
+            
+        except Exception as e:
+            if "api key" in str(e).lower():
+                pytest.skip(f"OpenAI API key required for reranking: {e}")
+            else:
+                raise

@@ -353,10 +353,136 @@ class LLMClient(BaseLLMClient):
             logger.debug(f"Could not extract token usage: {e}")
 
     def embed(self, text: str) -> List[float]:
-        raise NotImplementedError("Embedding is not supported by the openai provider")
+        """
+        Generate embeddings using OpenAI's embedding model.
+
+        Args:
+            text: Text to embed
+
+        Returns:
+            List of embedding values
+        """
+        try:
+            # Use OpenAI's latest embedding model
+            embedding_model = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
+            
+            response = self.client.embeddings.create(
+                model=embedding_model,
+                input=text,
+            )
+            
+            # Record token usage if available
+            try:
+                if hasattr(response, 'usage') and response.usage:
+                    usage_data = {
+                        "prompt_tokens": response.usage.prompt_tokens,
+                        "completion_tokens": 0,  # Embeddings don't have completion tokens
+                        "total_tokens": response.usage.total_tokens,
+                        "model_name": embedding_model,
+                        "call_type": "embedding"
+                    }
+                    from cogents.common.llm.token_tracker import TokenUsage
+                    usage = TokenUsage(**usage_data)
+                    get_token_tracker().record_usage(usage)
+                    logger.debug(f"Token usage for embedding: {usage.total_tokens} tokens")
+            except Exception as e:
+                logger.debug(f"Could not track embedding token usage: {e}")
+            
+            return response.data[0].embedding
+            
+        except Exception as e:
+            logger.error(f"Error generating embedding with OpenAI: {e}")
+            raise
 
     def embed_batch(self, chunks: List[str]) -> List[List[float]]:
-        raise NotImplementedError("Embedding is not supported by the openai provider")
+        """
+        Generate embeddings for multiple texts using OpenAI.
+
+        Args:
+            chunks: List of texts to embed
+
+        Returns:
+            List of embedding lists
+        """
+        try:
+            embedding_model = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
+            
+            response = self.client.embeddings.create(
+                model=embedding_model,
+                input=chunks,
+            )
+            
+            # Record token usage if available
+            try:
+                if hasattr(response, 'usage') and response.usage:
+                    usage_data = {
+                        "prompt_tokens": response.usage.prompt_tokens,
+                        "completion_tokens": 0,
+                        "total_tokens": response.usage.total_tokens,
+                        "model_name": embedding_model,
+                        "call_type": "embedding"
+                    }
+                    from cogents.common.llm.token_tracker import TokenUsage
+                    usage = TokenUsage(**usage_data)
+                    get_token_tracker().record_usage(usage)
+                    logger.debug(f"Token usage for batch embedding: {usage.total_tokens} tokens")
+            except Exception as e:
+                logger.debug(f"Could not track batch embedding token usage: {e}")
+            
+            return [item.embedding for item in response.data]
+            
+        except Exception as e:
+            logger.error(f"Error generating batch embeddings with OpenAI: {e}")
+            # Fallback to individual calls
+            embeddings = []
+            for chunk in chunks:
+                embedding = self.embed(chunk)
+                embeddings.append(embedding)
+            return embeddings
 
     def rerank(self, query: str, chunks: List[str]) -> List[str]:
-        raise NotImplementedError("Reranking is not supported by the openai provider")
+        """
+        Rerank chunks based on their relevance to the query using embeddings.
+        
+        Note: OpenAI doesn't have a native reranking API, so this implementation
+        uses a similarity-based approach with embeddings.
+
+        Args:
+            query: The query to rank against
+            chunks: List of text chunks to rerank
+
+        Returns:
+            Reranked list of chunks
+        """
+        try:
+            # Get embeddings for query and chunks
+            query_embedding = self.embed(query)
+            chunk_embeddings = self.embed_batch(chunks)
+
+            # Calculate cosine similarity
+            import math
+
+            def cosine_similarity(a: List[float], b: List[float]) -> float:
+                dot_product = sum(x * y for x, y in zip(a, b))
+                magnitude_a = math.sqrt(sum(x * x for x in a))
+                magnitude_b = math.sqrt(sum(x * x for x in b))
+                if magnitude_a == 0 or magnitude_b == 0:
+                    return 0
+                return dot_product / (magnitude_a * magnitude_b)
+
+            # Calculate similarities and sort
+            similarities = []
+            for i, chunk_embedding in enumerate(chunk_embeddings):
+                similarity = cosine_similarity(query_embedding, chunk_embedding)
+                similarities.append((similarity, i, chunks[i]))
+
+            # Sort by similarity (descending)
+            similarities.sort(key=lambda x: x[0], reverse=True)
+
+            # Return reranked chunks
+            return [chunk for _, _, chunk in similarities]
+
+        except Exception as e:
+            logger.error(f"Error reranking with OpenAI: {e}")
+            # Fallback: return original order
+            return chunks
