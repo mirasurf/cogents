@@ -117,14 +117,16 @@ class GoalGraph:
         if dependency_id not in self._nodes:
             raise NodeNotFoundError(f"Node {dependency_id} not found")
 
+        # Check if adding this edge would create a cycle before actually adding it
+        # Create a temporary graph to test for cycles
+        temp_graph = self._graph.copy()
+        temp_graph.add_edge(dependency_id, dependent_id)
+
+        if not nx.is_directed_acyclic_graph(temp_graph):
+            raise CycleDetectedError(f"Adding dependency {dependent_id} -> {dependency_id} would create a cycle")
+
         # Add edge to graph (dependency -> dependent)
         self._graph.add_edge(dependency_id, dependent_id)
-
-        # Check for cycles
-        if not nx.is_directed_acyclic_graph(self._graph):
-            # Remove the edge that caused the cycle
-            self._graph.remove_edge(dependency_id, dependent_id)
-            raise CycleDetectedError(f"Adding dependency {dependency_id} -> {dependent_id} would create a cycle")
 
         # Update node relationships: dependent node gets the dependency
         self._nodes[dependent_id].add_dependency(dependency_id)
@@ -196,7 +198,17 @@ class GoalGraph:
         """
         ready_nodes = []
 
+        # First, find all nodes that are dependencies of other nodes
+        dependency_nodes = set()
         for node in self._nodes.values():
+            dependency_nodes.update(node.dependencies)
+
+        for node in self._nodes.values():
+            # Skip nodes that have children but are not dependencies of any other node
+            # These are organizational containers that are not meant to be executed directly
+            if node.children and node.id not in dependency_nodes:
+                continue
+
             if node.status == NodeStatus.PENDING:
                 # Check if all dependencies are completed
                 all_deps_completed = True
@@ -258,75 +270,6 @@ class GoalGraph:
         node = self._nodes[node_id]
         return [self._nodes[child_id] for child_id in node.children if child_id in self._nodes]
 
-    def get_descendants(self, node_id: str) -> List[str]:
-        """
-        Get all descendant nodes of a given node.
-
-        Args:
-            node_id: The node ID
-
-        Returns:
-            List of descendant node IDs
-        """
-        if node_id not in self._nodes:
-            return []
-
-        descendants = set()
-        to_process = [node_id]
-
-        while to_process:
-            current_id = to_process.pop(0)
-            current = self._nodes[current_id]
-
-            for child_id in current.children:
-                if child_id not in descendants:
-                    descendants.add(child_id)
-                    to_process.append(child_id)
-        return list(descendants)
-
-    def get_ancestors(self, node_id: str) -> List[str]:
-        """
-        Get all ancestor nodes of a given node.
-
-        Args:
-            node_id: The node ID
-
-        Returns:
-            List of ancestor node IDs
-        """
-        if node_id not in self._nodes:
-            return []
-
-        ancestors = set()
-        current_id = node_id
-
-        # Add parent ancestors
-        while current_id in self._nodes:
-            node = self._nodes[current_id]
-            if node.parent and node.parent not in ancestors:
-                ancestors.add(node.parent)
-                current_id = node.parent
-            else:
-                break
-
-        # Add dependency ancestors recursively
-        def add_dependency_ancestors(node_id: str, visited: set):
-            if node_id in visited:
-                return
-            visited.add(node_id)
-
-            node = self._nodes[node_id]
-            for dep_id in node.dependencies:
-                if dep_id in self._nodes and dep_id not in ancestors:
-                    ancestors.add(dep_id)
-                    # Recursively add ancestors of this dependency
-                    add_dependency_ancestors(dep_id, visited)
-
-        # Start recursive traversal from the original node
-        add_dependency_ancestors(node_id, set())
-
-        return list(ancestors)
-
     def list_nodes(self) -> List[GoalNode]:
         """
         Get list of all node objects.
@@ -335,58 +278,6 @@ class GoalGraph:
             List of all GoalNode objects
         """
         return list(self._nodes.values())
-
-    def save_graph(self, filepath: str) -> None:
-        """
-        Save the graph to a file.
-
-        Args:
-            filepath: Path to save the graph
-        """
-        # Convert sets to lists for JSON serialization
-        graph_data = {"nodes": {}, "edges": list(self._graph.edges())}
-
-        for node_id, node in self._nodes.items():
-            node_dict = node.to_dict()
-            # Convert sets to lists for JSON serialization
-            if "dependencies" in node_dict:
-                node_dict["dependencies"] = list(node_dict["dependencies"])
-            if "children" in node_dict:
-                node_dict["children"] = list(node_dict["children"])
-            graph_data["nodes"][node_id] = node_dict
-
-        with open(filepath, "w") as f:
-            json.dump(graph_data, f, indent=2, default=str)
-
-    def load_graph(self, filepath: str) -> None:
-        """
-        Load the graph from a file.
-
-        Args:
-            filepath: Path to load the graph from
-        """
-        with open(filepath, "r") as f:
-            graph_data = json.load(f)
-
-        # Clear existing data
-        self._nodes.clear()
-        self._graph.clear()
-
-        # Load nodes
-        for node_id, node_dict in graph_data["nodes"].items():
-            # Convert lists back to sets for dependencies and children
-            if "dependencies" in node_dict and isinstance(node_dict["dependencies"], list):
-                node_dict["dependencies"] = set(node_dict["dependencies"])
-            if "children" in node_dict and isinstance(node_dict["children"], list):
-                node_dict["children"] = set(node_dict["children"])
-
-            node = GoalNode.from_dict(node_dict)
-            self._nodes[node_id] = node
-            self._graph.add_node(node_id)
-
-        # Load edges
-        for edge in graph_data["edges"]:
-            self._graph.add_edge(*edge)
 
     def get_nodes_by_status(self, status: NodeStatus) -> List[GoalNode]:
         """
@@ -398,7 +289,7 @@ class GoalGraph:
         Returns:
             List of GoalNodes with the given status
         """
-        return [node for node in self._nodes.values() if node.status == status]
+        return [node for node in self._nodes.values() if node.status == status and not node.children]
 
     def get_dependencies(self, node_id: str) -> List[GoalNode]:
         """
@@ -421,12 +312,97 @@ class GoalGraph:
 
     def get_root_nodes(self) -> List[GoalNode]:
         """
-        Get all root nodes (nodes with no dependencies).
+        Get all root nodes (nodes with no parents).
 
         Returns:
             List of root GoalNodes
         """
-        return [node for node in self._nodes.values() if not node.dependencies]
+        return [node for node in self._nodes.values() if node.parent is None]
+
+    def get_descendants(self, node_id: str) -> List[GoalNode]:
+        """
+        Get all descendant nodes of a given node.
+
+        Args:
+            node_id: The node ID
+
+        Returns:
+            List of descendant GoalNode objects
+        """
+        if node_id not in self._nodes:
+            return []
+
+        descendants = []
+        visited = set()
+        to_process = [node_id]
+
+        while to_process:
+            current_id = to_process.pop(0)
+            if current_id in visited:
+                continue
+            visited.add(current_id)
+
+            current = self._nodes[current_id]
+            for child_id in current.children:
+                if child_id in self._nodes and child_id not in visited:
+                    descendants.append(self._nodes[child_id])
+                    to_process.append(child_id)
+        return descendants
+
+    def get_ancestors(self, node_id: str) -> List[GoalNode]:
+        """
+        Get all ancestor nodes of a given node.
+
+        Args:
+            node_id: The node ID
+
+        Returns:
+            List of ancestor GoalNode objects
+        """
+        if node_id not in self._nodes:
+            return []
+
+        ancestors = []
+        visited = set()
+        current_id = node_id
+
+        # First, traverse parent hierarchy
+        while current_id in self._nodes:
+            node = self._nodes[current_id]
+            if node.parent and node.parent not in visited:
+                parent = self._nodes[node.parent]
+                ancestors.append(parent)
+                visited.add(node.parent)
+                current_id = node.parent
+            else:
+                break
+
+        # Then, traverse dependency hierarchy
+        def add_dependency_ancestors(dep_id: str):
+            if dep_id in visited or dep_id not in self._nodes:
+                return
+            visited.add(dep_id)
+            dep_node = self._nodes[dep_id]
+            ancestors.append(dep_node)
+            # Recursively add ancestors of this dependency
+            for parent_dep_id in dep_node.dependencies:
+                add_dependency_ancestors(parent_dep_id)
+
+        # Start recursive traversal from the original node's dependencies
+        original_node = self._nodes[node_id]
+        for dep_id in original_node.dependencies:
+            add_dependency_ancestors(dep_id)
+
+        return ancestors
+
+    def is_dag(self) -> bool:
+        """
+        Check if the graph is a DAG.
+
+        Returns:
+            True if valid DAG, False otherwise
+        """
+        return nx.is_directed_acyclic_graph(self._graph)
 
     def get_leaf_nodes(self) -> List[GoalNode]:
         """
@@ -458,42 +434,9 @@ class GoalGraph:
         """
         return node_id in self._nodes
 
-    def get_node_count(self) -> int:
-        """
-        Get the total number of nodes in the graph.
-
-        Returns:
-            Number of nodes
-        """
-        return len(self._nodes)
-
-    def is_valid_dag(self) -> bool:
-        """
-        Check if the graph is a valid DAG.
-
-        Returns:
-            True if valid DAG, False otherwise
-        """
-        return nx.is_directed_acyclic_graph(self._graph)
-
-    def get_topological_order(self) -> List[str]:
-        """
-        Get nodes in topological order.
-
-        Returns:
-            List of node IDs in topological order
-
-        Raises:
-            CycleDetectedError: If graph contains cycles
-        """
-        if not self.is_valid_dag():
-            raise CycleDetectedError("Graph contains cycles")
-
-        return list(nx.topological_sort(self._graph))
-
     # Persistence operations
 
-    def save_to_file(self, filepath: Path) -> None:
+    def save_to_json(self, filepath: Path) -> None:
         """
         Save the graph to a JSON file.
 
@@ -510,7 +453,7 @@ class GoalGraph:
         with open(filepath, "w") as f:
             json.dump(data, f, indent=2, default=str)
 
-    def load_from_file(self, filepath: Path) -> None:
+    def load_from_json(self, filepath: Path) -> None:
         """
         Load the graph from a JSON file.
 
@@ -566,30 +509,6 @@ class GoalGraph:
             "leaf_nodes": len(self.get_leaf_nodes()),
             **status_counts,
         }
-
-    # Methods expected by tests (with parentheses)
-    def node_count(self) -> int:
-        """Get the number of nodes in the graph."""
-        return self.get_node_count()
-
-    def edge_count(self) -> int:
-        """Get the number of edges in the graph."""
-        return len(self._graph.edges())
-
-    # Methods expected by tests
-    # Note: get_ancestors is already defined above and handles both parent and dependency relationships
-
-    def topological_sort(self) -> List[str]:
-        """Get topological sort of the graph."""
-        return self.get_topological_order()
-
-    def save(self, filepath: Path) -> None:
-        """Save the graph to a file."""
-        self.save_to_file(filepath)
-
-    def load(self, filepath: Path) -> None:
-        """Load the graph from a file."""
-        self.load_from_file(filepath)
 
     # Test-compatible methods that return IDs instead of objects
     def get_dependency_ids(self, node_id: str) -> set:
