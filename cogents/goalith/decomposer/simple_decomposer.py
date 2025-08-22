@@ -39,13 +39,21 @@ class SimpleListDecomposer(GoalDecomposer):
         Returns:
             List of task nodes
         """
+        import copy
+
         nodes = []
         for i, subtask_desc in enumerate(self._subtasks):
+            # Deep copy the context to avoid shared references
+            context_copy = copy.deepcopy(goal_node.context) if goal_node.context else {}
+
             task_node = GoalNode(
                 description=subtask_desc,
                 parent=goal_node.id,
                 priority=goal_node.priority,
-                context=goal_node.context.copy() if goal_node.context else {},
+                context=context_copy,
+                tags=goal_node.tags.copy() if goal_node.tags else [],
+                estimated_effort=goal_node.estimated_effort,
+                assigned_to=goal_node.assigned_to,
                 decomposer_name=self.name,
             )
             nodes.append(task_node)
