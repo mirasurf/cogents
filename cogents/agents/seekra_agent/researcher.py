@@ -11,12 +11,12 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import Send
 
-from cogents.base.base import BaseResearcher
-from cogents.base.models import ResearchOutput
+from cogents.base.base import BaseResearcher, ResearchOutput
 from cogents.common.logging import get_logger
+from cogents.common.typing_compat import override
 
 from .configuration import Configuration
-from .prompts import get_research_prompts
+from .prompts import answer_instructions, query_writer_instructions, reflection_instructions
 from .schemas import Reflection, SearchQueryList
 from .state import QueryState, ReflectionState, ResearchState, WebSearchState
 
@@ -78,16 +78,7 @@ class SeekraAgent(BaseResearcher):
         # Create the research graph
         self.graph = self._build_graph()
 
-    def get_prompts(self) -> Dict[str, str]:
-        """
-        Get prompts for the researcher.
-        Override this method in subclasses for specialized prompts.
-
-        Returns:
-            Dictionary containing all prompts for the research workflow
-        """
-        return get_research_prompts()
-
+    @override
     def get_state_class(self) -> Type:
         """
         Get the state class for this researcher.
@@ -97,6 +88,95 @@ class SeekraAgent(BaseResearcher):
             The state class to use for the research workflow
         """
         return ResearchState
+
+    @override
+    def _build_graph(self) -> StateGraph:
+        """Create the LangGraph research workflow."""
+        state_class = self.get_state_class()
+        workflow = StateGraph(state_class)
+
+        # Add nodes
+        workflow.add_node("generate_query", self._generate_query_node)
+        if self.configuration.search_engine == "tavily":
+            workflow.add_node("web_research", self._tavily_research_node)
+        elif self.configuration.search_engine == "google":
+            workflow.add_node("web_research", self._google_research_node)
+        else:
+            workflow.add_node("web_research", self._google_research_node)
+
+        workflow.add_node("reflection", self._reflection_node)
+        workflow.add_node("finalize_answer", self._finalize_answer_node)
+
+        # Set entry point
+        workflow.add_edge(START, "generate_query")
+
+        # Add conditional edges
+        workflow.add_conditional_edges("generate_query", self._continue_to_web_research, ["web_research"])
+        workflow.add_edge("web_research", "reflection")
+        workflow.add_conditional_edges("reflection", self._evaluate_research, ["web_research", "finalize_answer"])
+        workflow.add_edge("finalize_answer", END)
+
+        return workflow.compile()
+
+    @override
+    def research(
+        self,
+        user_message: str,
+        context: Dict[str, Any] = None,
+        config: Optional[RunnableConfig] = None,
+    ) -> ResearchOutput:
+        """
+        Research a topic and return structured results.
+
+        Args:
+            user_message: User's research request
+            context: Additional context for research
+            config: Optional RunnableConfig for runtime configuration
+
+        Returns:
+            ResearchOutput with content and sources
+        """
+        try:
+            # Initialize state (can be customized by subclasses)
+            initial_state = self.customize_initial_state(user_message, context or {})
+
+            # Run the research graph with optional runtime configuration
+            if config:
+                result = self.graph.invoke(initial_state, config=config)
+            else:
+                result = self.graph.invoke(initial_state)
+
+            # Extract the final AI message
+            final_message = None
+            for message in reversed(result["messages"]):
+                if isinstance(message, AIMessage):
+                    final_message = message.content
+                    break
+
+            return ResearchOutput(
+                content=final_message or "Research completed",
+                sources=result.get("sources_gathered", []),
+                summary=f"Research completed for topic",
+                timestamp=datetime.now(),
+            )
+
+        except Exception as e:
+            logger.error(f"Error in research: {e}")
+            raise RuntimeError(f"Research failed: {str(e)}")
+
+    def get_prompts(self) -> Dict[str, str]:
+        """
+        Get prompts for the researcher.
+        Override this method in subclasses for specialized prompts.
+
+        Returns:
+            Dictionary containing all prompts for the research workflow
+        """
+        return {
+            "query_writer": query_writer_instructions,
+            "reflection": reflection_instructions,
+            "answer": answer_instructions,
+        }
 
     def customize_initial_state(self, user_message: str, context: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -208,34 +288,6 @@ class SeekraAgent(BaseResearcher):
             Formatted final answer
         """
         return final_answer
-
-    def _build_graph(self) -> StateGraph:
-        """Create the LangGraph research workflow."""
-        state_class = self.get_state_class()
-        workflow = StateGraph(state_class)
-
-        # Add nodes
-        workflow.add_node("generate_query", self._generate_query_node)
-        if self.configuration.search_engine == "tavily":
-            workflow.add_node("web_research", self._tavily_research_node)
-        elif self.configuration.search_engine == "google":
-            workflow.add_node("web_research", self._google_research_node)
-        else:
-            workflow.add_node("web_research", self._google_research_node)
-
-        workflow.add_node("reflection", self._reflection_node)
-        workflow.add_node("finalize_answer", self._finalize_answer_node)
-
-        # Set entry point
-        workflow.add_edge(START, "generate_query")
-
-        # Add conditional edges
-        workflow.add_conditional_edges("generate_query", self._continue_to_web_research, ["web_research"])
-        workflow.add_edge("web_research", "reflection")
-        workflow.add_conditional_edges("reflection", self._evaluate_research, ["web_research", "finalize_answer"])
-        workflow.add_edge("finalize_answer", END)
-
-        return workflow.compile()
 
     def _generate_query_node(self, state: ResearchState, config: RunnableConfig) -> QueryState:
         """Generate search queries based on user request using instructor structured output."""
@@ -471,48 +523,3 @@ class SeekraAgent(BaseResearcher):
             "messages": [AIMessage(content=formatted_summary)],
             "sources_gathered": sources,
         }
-
-    def research(
-        self,
-        user_message: str,
-        context: Dict[str, Any] = None,
-        config: Optional[RunnableConfig] = None,
-    ) -> ResearchOutput:
-        """
-        Research a topic and return structured results.
-
-        Args:
-            user_message: User's research request
-            context: Additional context for research
-            config: Optional RunnableConfig for runtime configuration
-
-        Returns:
-            ResearchOutput with content and sources
-        """
-        try:
-            # Initialize state (can be customized by subclasses)
-            initial_state = self.customize_initial_state(user_message, context or {})
-
-            # Run the research graph with optional runtime configuration
-            if config:
-                result = self.graph.invoke(initial_state, config=config)
-            else:
-                result = self.graph.invoke(initial_state)
-
-            # Extract the final AI message
-            final_message = None
-            for message in reversed(result["messages"]):
-                if isinstance(message, AIMessage):
-                    final_message = message.content
-                    break
-
-            return ResearchOutput(
-                content=final_message or "Research completed",
-                sources=result.get("sources_gathered", []),
-                summary=f"Research completed for topic",
-                timestamp=datetime.now(),
-            )
-
-        except Exception as e:
-            logger.error(f"Error in research: {e}")
-            raise RuntimeError(f"Research failed: {str(e)}")

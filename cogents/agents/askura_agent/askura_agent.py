@@ -17,6 +17,7 @@ from langgraph.graph.message import add_messages
 from cogents.base.base import BaseConversationAgent
 from cogents.common.lg_hooks import NodeLoggingCallback, TokenUsageCallback
 from cogents.common.logging import get_logger
+from cogents.common.typing_compat import override
 
 from .conversation import ConversationManager
 from .extractor import InformationExtractor
@@ -58,23 +59,17 @@ class AskuraAgent(BaseConversationAgent):
         self.graph = self._build_graph()
         self.export_graph()
 
+    @override
     def _build_graph(self) -> StateGraph:
         """Build the agent's graph. Required by BaseGraphicAgent."""
         return self._build_conversation_graph()
 
+    @override
     def get_state_class(self):
         """Get the state class for this agent's graph. Required by BaseGraphicAgent."""
         return AskuraState
 
-    def run(self, user_message: str, context: Dict[str, Any] = None, config: Optional[RunnableConfig] = None) -> str:
-        """Run the agent with a user message and context. Required by BaseAgent."""
-        # Create a temporary user ID for standalone run
-        user_id = "standalone_user"
-
-        # Start a new conversation
-        response = self.start_conversation(user_id, user_message)
-        return response.message
-
+    @override
     def start_conversation(self, user_id: str, initial_message: Optional[str] = None) -> AskuraResponse:
         """Start a new conversation with a user. Required by BaseConversationAgent."""
         session_id = str(uuid.uuid4())
@@ -113,6 +108,7 @@ class AskuraAgent(BaseConversationAgent):
         logger.info(f"Started conversation for user {user_id}, session {session_id}")
         return response
 
+    @override
     def process_user_message(self, user_id: str, session_id: str, message: str) -> AskuraResponse:
         """Process a user message and return the agent's response. Required by BaseConversationAgent."""
 
@@ -135,10 +131,6 @@ class AskuraAgent(BaseConversationAgent):
         self._session_states[session_id] = updated_state
 
         return response
-
-    def get_session_state(self, session_id: str) -> Optional[AskuraState]:
-        """Get the state for a specific session."""
-        return self._session_states.get(session_id)
 
     def _run_graph(self, state: AskuraState) -> tuple[AskuraResponse, AskuraState]:
         """Run the conversation graph with the given state."""

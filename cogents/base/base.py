@@ -1,15 +1,16 @@
 import os
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional, Type
+from datetime import datetime
+from typing import Any, Dict, List, Optional, Type
 
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import StateGraph
+from pydantic import BaseModel, Field
 
 from cogents.common.llm import get_llm_client_instructor
 from cogents.common.llm.token_tracker import get_token_tracker
 from cogents.common.logging import get_logger
-
-from .models import ResearchOutput
+from cogents.common.typing_compat import override
 
 
 class BaseAgent(ABC):
@@ -71,12 +72,12 @@ class BaseGraphicAgent(BaseAgent):
         self.graph: Optional[StateGraph] = None
 
     @abstractmethod
-    def _build_graph(self) -> StateGraph:
-        """Build the agent's graph. Must be implemented by subclasses."""
-
-    @abstractmethod
     def get_state_class(self) -> Type:
         """Get the state class for this agent's graph."""
+
+    @abstractmethod
+    def _build_graph(self) -> StateGraph:
+        """Build the agent's graph. Must be implemented by subclasses."""
 
     def export_graph(self, output_path: Optional[str] = None, format: str = "png"):
         """
@@ -175,9 +176,21 @@ class BaseConversationAgent(BaseGraphicAgent):
         self._session_states.clear()
         self.logger.info(f"Cleared {session_count} sessions")
 
-    @abstractmethod
-    def _create_response(self, state: Any) -> Any:
-        """Create response from final state. Must be implemented by subclasses."""
+    @override
+    def run(self, user_message: str, context: Dict[str, Any] = None, config: Optional[RunnableConfig] = None) -> str:
+        """Run the agent with a user message and context. Required by BaseAgent."""
+        # Create a temporary user ID for standalone run
+        response = self.start_conversation("standalone_user", user_message)
+        return response.message
+
+
+class ResearchOutput(BaseModel):
+    """Output from research process."""
+
+    content: str = Field(default="")
+    sources: List[Dict[str, Any]] = Field(default_factory=list)
+    summary: str = Field(default="")
+    timestamp: datetime = Field(default_factory=datetime.now)
 
 
 class BaseResearcher(BaseGraphicAgent):
@@ -204,34 +217,7 @@ class BaseResearcher(BaseGraphicAgent):
     ) -> ResearchOutput:
         """Research a topic and return structured results."""
 
-    @abstractmethod
-    def get_prompts(self) -> Dict[str, str]:
-        """
-        Get prompts for the researcher.
-        Override this method in subclasses for specialized prompts.
-        """
-
-    def preprocess_research_topic(self, research_topic: str) -> str:
-        """
-        Preprocess research topic before generating queries.
-        Can be overridden by subclasses for domain-specific preprocessing.
-        """
-        return research_topic.strip()
-
-    def format_final_answer(self, final_answer: str, sources: list[Dict[str, Any]]) -> str:
-        """
-        Format the final research answer.
-        Override this method in subclasses for domain-specific formatting.
-        """
-        return final_answer
-
-    @abstractmethod
-    def generate_fallback_queries(self, prompt: str) -> list[str]:
-        """
-        Generate fallback queries when structured generation fails.
-        Must be implemented by subclasses.
-        """
-
+    @override
     def run(self, user_message: str, context: Dict[str, Any] = None, config: Optional[RunnableConfig] = None) -> str:
         """
         Default implementation of run() for researchers.

@@ -2,18 +2,6 @@
 Prompts for the SeekraAgent agent.
 """
 
-from typing import Dict
-
-
-def get_research_prompts() -> Dict[str, str]:
-    """Get all research prompts."""
-    return {
-        "query_writer": query_writer_instructions,
-        "reflection": reflection_instructions,
-        "answer": answer_instructions,
-    }
-
-
 query_writer_instructions = """Your goal is to generate sophisticated and diverse web search queries for research. These queries are intended for an advanced automated web research tool capable of analyzing complex results, following links, and synthesizing information.
 
 Instructions:
