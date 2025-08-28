@@ -11,7 +11,7 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import Send
 
-from cogents.base.base import BaseResearcher, ResearchOutput
+from cogents.base import BaseResearcher, ResearchOutput
 from cogents.common.logging import get_logger
 from cogents.common.typing_compat import override
 
