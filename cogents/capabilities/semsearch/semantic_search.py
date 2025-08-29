@@ -11,7 +11,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from pydantic import BaseModel, Field
 
-from cogents.common.websearch import BaseSearch, SearchResult, TavilySearchWrapper
+from cogents.capabilities.websearch import BaseSearch, SearchResult, TavilySearchWrapper
 
 from .document_processor import ChunkingConfig, DocumentProcessor
 from .types import DocumentChunk

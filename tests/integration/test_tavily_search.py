@@ -1,6 +1,6 @@
 import pytest
 
-from cogents.common.websearch import TavilySearchWrapper
+from cogents.capabilities.websearch import TavilySearchWrapper
 
 
 @pytest.mark.integration

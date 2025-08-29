@@ -7,7 +7,7 @@ from the cogents.tools.web_search module.
 
 import asyncio
 
-from cogents.tools.web_search import google_ai_search, tavily_search
+from cogents.toolify.repo.web_search import google_ai_search, tavily_search
 
 
 def example_tavily_search():

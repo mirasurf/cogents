@@ -1,6 +1,7 @@
 import os
 
-from ..consts import DEFAULT_EMBEDDING_DIMS
+from cogents.common.consts import DEFAULT_EMBEDDING_DIMS
+
 from .base import BaseVectorStore
 from .models import OutputData
 

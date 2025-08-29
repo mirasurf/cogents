@@ -13,7 +13,7 @@ from typing import List, Optional
 from langchain_tavily import TavilySearch
 from pydantic import BaseModel, ConfigDict, Field
 
-from cogents.common.websearch.base_search import BaseSearch, SearchResult
+from cogents.capabilities.websearch.base_search import BaseSearch, SearchResult
 
 logger = logging.getLogger(__name__)
 
