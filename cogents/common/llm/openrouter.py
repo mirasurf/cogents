@@ -15,8 +15,7 @@ from typing import Optional, TypeVar
 from cogents.common.consts import GEMINI_FLASH
 from cogents.common.llm.openai import LLMClient as OpenAILLMClient
 from cogents.common.logging import get_logger
-
-from .opik_tracing import configure_opik
+from cogents.common.tracing.opik_tracing import configure_opik
 
 # Only import OPIK if tracing is enabled
 OPIK_AVAILABLE = False

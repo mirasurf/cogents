@@ -1,4 +1,4 @@
-# Cursor AI Development Rules
+# Cogents Development Guide
 
 ## Project Overview
 
@@ -110,14 +110,20 @@ For llamacpp provider, you can set:
 - Use `make quality` to run all quality checks
 - Use `make autofix` to auto-fix code quality issues
 
-## Rationale
+## Development Environment Tips
 
-Using `poetry run` ensures:
-- Consistent dependency versions across development environments
-- Proper virtual environment activation
-- Access to all project dependencies
-- Isolation from system Python packages
+- Use `poetry install` to install dependencies
+- Use `poetry shell` to activate the virtual environment
+- Use `poetry add <package>` to add new dependencies
+- Use `poetry update` to update existing dependencies
 
+## PR Guidelines
+
+- Title format: `[<module_name>] <Description>`
+- Always run `make quality` and `make test` before committing
+- Ensure all tests pass before submitting PRs
+- Update documentation for any new features or breaking changes
+- Follow the existing code style and patterns
 
 ## Environment Variables Documentation
 
@@ -151,3 +157,11 @@ grep_search query="os\.getenv|os\.environ" include_pattern="examples/**/*.py"
 ```
 
 This ensures that `env.example` files are accurate and only show variables that users actually need to configure in production environments.
+
+## Rationale
+
+Using `poetry run` ensures:
+- Consistent dependency versions across development environments
+- Proper virtual environment activation
+- Access to all project dependencies
+- Isolation from system Python packages

@@ -20,14 +20,14 @@ from instructor import Instructor, Mode, patch
 from openai import OpenAI
 
 from cogents.common.llm.base import BaseLLMClient
-from cogents.common.llm.token_tracker import (
+from cogents.common.logging import get_logger
+from cogents.common.tracing import (
+    configure_opik,
     estimate_token_usage,
     extract_token_usage_from_openai_response,
     get_token_tracker,
+    is_opik_enabled,
 )
-from cogents.common.logging import get_logger
-
-from .opik_tracing import configure_opik, is_opik_enabled
 
 # Only import OPIK if tracing is enabled
 OPIK_AVAILABLE = False
@@ -384,7 +384,7 @@ class LLMClient(BaseLLMClient):
                         "model_name": self.embed_model,
                         "call_type": "embedding",
                     }
-                    from cogents.common.llm.token_tracker import TokenUsage
+                    from cogents.common.tracing import TokenUsage
 
                     usage = TokenUsage(**usage_data)
                     get_token_tracker().record_usage(usage)
@@ -436,7 +436,7 @@ class LLMClient(BaseLLMClient):
                         "model_name": self.embed_model,
                         "call_type": "embedding",
                     }
-                    from cogents.common.llm.token_tracker import TokenUsage
+                    from cogents.common.tracing import TokenUsage
 
                     usage = TokenUsage(**usage_data)
                     get_token_tracker().record_usage(usage)

@@ -15,8 +15,8 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
 
 from cogents.base.base import BaseConversationAgent
-from cogents.common.lg_hooks import NodeLoggingCallback, TokenUsageCallback
 from cogents.common.logging import get_logger
+from cogents.common.tracing import NodeLoggingCallback, TokenUsageCallback
 from cogents.common.typing_compat import override
 
 from .conversation import ConversationManager

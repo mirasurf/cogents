@@ -7,10 +7,9 @@ from huggingface_hub import snapshot_download
 from llama_cpp import Llama
 
 from cogents.common.llm.base import BaseLLMClient
-from cogents.common.llm.token_tracker import estimate_token_usage, get_token_tracker
 from cogents.common.logging import get_logger
-
-from .opik_tracing import configure_opik
+from cogents.common.tracing import estimate_token_usage, get_token_tracker
+from cogents.common.tracing.opik_tracing import configure_opik
 
 # Only import OPIK if tracing is enabled
 OPIK_AVAILABLE = False

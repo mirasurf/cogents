@@ -127,3 +127,7 @@ For detailed documentation, visit: https://cogents.readthedocs.io/ (under constr
 ## License
 
 MIT License - see [LICENSE](LICENSE) file for details.
+
+## Acknowledgment
+
+- Tencent [Youtu-agent](https://github.com/Tencent/Youtu-agent) toolkits integration.

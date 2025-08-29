@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Export token tracking utilities from the new location
-from .llm.token_tracker import get_token_tracker, record_token_usage
+from .tracing.token_tracker import get_token_tracker, record_token_usage
 
 # Export typing compatibility utilities
 from .typing_compat import override

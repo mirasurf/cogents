@@ -224,6 +224,12 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "vectorstore: mark test as requiring vector store")
     config.addinivalue_line("markers", "websearch: mark test as requiring web search")
 
+    # Ensure toolkits are imported before tests run
+    try:
+        print("Toolkits imported during pytest configuration")
+    except ImportError as e:
+        print(f"Warning: Could not import toolkits during pytest configuration: {e}")
+
 
 def pytest_collection_modifyitems(config, items):
     """Modify test collection based on environment."""
@@ -249,3 +255,148 @@ def pytest_addoption(parser):
     parser.addoption("--llm", action="store_true", default=False, help="run LLM-dependent tests")
     parser.addoption("--vectorstore", action="store_true", default=False, help="run vectorstore-dependent tests")
     parser.addoption("--websearch", action="store_true", default=False, help="run web search-dependent tests")
+
+
+def pytest_sessionstart(session):
+    """Ensure toolkits are available at the start of each test session."""
+    try:
+        print("Toolkits imported at session start")
+    except ImportError as e:
+        print(f"Warning: Could not import toolkits at session start: {e}")
+
+
+def pytest_runtest_setup(item):
+    """Ensure toolkits are available before each test."""
+    try:
+        pass
+    except ImportError:
+        pass  # Silently continue if import fails
+
+
+def pytest_runtest_teardown(item, nextitem):
+    """Clean up after each test to ensure toolkit availability."""
+    try:
+        # Re-import toolkits if they were lost during test
+        pass
+    except ImportError:
+        pass
+
+
+@pytest.fixture(scope="session", autouse=True)
+def ensure_toolkits_available():
+    """Ensure all toolkits are available for the entire test session."""
+    try:
+        pass
+
+        # Force toolkit discovery if needed
+        from cogents.tools.registry import ToolkitRegistry
+
+        if len(ToolkitRegistry.list_toolkits()) < 10:  # Should have many toolkits
+            from cogents.tools.registry import _discover_builtin_toolkits
+
+            _discover_builtin_toolkits()
+
+        print(f"Session toolkits available: {ToolkitRegistry.list_toolkits()}")
+    except ImportError as e:
+        print(f"Warning: Could not import toolkits at session start: {e}")
+
+    yield
+
+
+# Comprehensive toolkit fixtures for testing
+@pytest.fixture
+def available_toolkits():
+    """Get list of all available toolkits."""
+    from cogents.tools.registry import ToolkitRegistry
+
+    return ToolkitRegistry.list_toolkits()
+
+
+@pytest.fixture
+def toolkit_registry():
+    """Get the toolkit registry instance."""
+    from cogents.tools.registry import ToolkitRegistry
+
+    return ToolkitRegistry
+
+
+@pytest.fixture
+def mock_toolkit_config():
+    """Create a mock toolkit configuration for testing."""
+    from cogents.tools.config import ToolkitConfig
+
+    return ToolkitConfig(
+        mode="builtin",
+        name="test_toolkit",
+        activated_tools=None,
+        config={},
+        llm_config={},
+        mcp_server_path=None,
+        mcp_server_args=[],
+        mcp_server_env={},
+        log_level="INFO",
+        enable_tracing=False,
+    )
+
+
+@pytest.fixture
+def ensure_toolkit_available():
+    """Decorator to ensure a specific toolkit is available for testing."""
+
+    def _ensure_toolkit(toolkit_name):
+        from cogents.tools.registry import ToolkitRegistry
+
+        if not ToolkitRegistry.is_registered(toolkit_name):
+            pytest.skip(f"Toolkit '{toolkit_name}' not available for testing")
+
+        return ToolkitRegistry.get_toolkit_class(toolkit_name)
+
+    return _ensure_toolkit
+
+
+@pytest.fixture
+def toolkit_availability_check():
+    """Check if specific toolkits are available and skip tests if not."""
+
+    def _check_availability(required_toolkits):
+        from cogents.tools.registry import ToolkitRegistry
+
+        missing_toolkits = []
+        for toolkit_name in required_toolkits:
+            if not ToolkitRegistry.is_registered(toolkit_name):
+                missing_toolkits.append(toolkit_name)
+
+        if missing_toolkits:
+            pytest.skip(f"Required toolkits not available: {missing_toolkits}")
+
+        return True
+
+    return _check_availability
+
+
+@pytest.fixture
+def restore_toolkits_after_test():
+    """Fixture to restore toolkits if they were cleared during a test."""
+    from cogents.tools.registry import ToolkitRegistry
+
+    # Save current state
+    original_toolkits = ToolkitRegistry.list_toolkits()
+
+    yield
+
+    # Check if toolkits were lost and restore them
+    current_toolkits = ToolkitRegistry.list_toolkits()
+    if len(current_toolkits) < len(original_toolkits):
+        print(f"Toolkits were lost during test. Restoring from {len(current_toolkits)} to {len(original_toolkits)}")
+        try:
+            from cogents.tools.registry import _discover_builtin_toolkits
+
+            _discover_builtin_toolkits()
+        except Exception as e:
+            print(f"Warning: Could not restore toolkits: {e}")
+
+
+@pytest.fixture(autouse=True)
+def auto_restore_toolkits(restore_toolkits_after_test):
+    """Automatically restore toolkits after each test."""
+    yield

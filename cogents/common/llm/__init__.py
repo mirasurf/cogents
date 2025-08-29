@@ -3,7 +3,6 @@ from typing import Optional
 
 from .base import BaseLLMClient
 from .litellm import LLMClient as LitellmLLMClient
-from .ollama import LLMClient as OllamaLLMClient
 from .openai import LLMClient as OpenAILLMClient
 from .openrouter import LLMClient as OpenRouterLLMClient
 
@@ -15,7 +14,16 @@ try:
 except ImportError:
     LlamaCppLLMClient = None
     LLAMACPP_AVAILABLE = False
-from .token_tracker import TokenUsage, TokenUsageTracker, get_token_tracker, record_token_usage
+
+# Optional import - ollama might not be available
+try:
+    from .ollama import LLMClient as OllamaLLMClient
+
+    OLLAMA_AVAILABLE = True
+except ImportError:
+    OllamaLLMClient = None
+    OLLAMA_AVAILABLE = False
+
 
 __all__ = [
     "BaseLLMClient",
@@ -25,10 +33,6 @@ __all__ = [
     "OpenAILLMClient",
     "get_llm_client",
     "get_llm_client_instructor",
-    "get_token_tracker",
-    "record_token_usage",
-    "TokenUsage",
-    "TokenUsageTracker",
 ]
 
 #############################
@@ -49,7 +53,7 @@ def get_llm_client(
     Get an LLM client instance based on the specified provider.
 
     Args:
-        provider: LLM provider to use ("openrouter", "openai", "ollama", "llamacpp", "litellm")
+        provider: LLM provider to use ("openrouter", "openai", "litellm" always available; "ollama", "llamacpp" require optional dependencies)
         base_url: Base URL for API (used by openai and ollama providers)
         api_key: API key for authentication (used by openai and openrouter providers)
         instructor: Whether to enable instructor for structured output
@@ -63,7 +67,7 @@ def get_llm_client(
         LLMClient instance for the specified provider
 
     Raises:
-        ValueError: If provider is not supported
+        ValueError: If provider is not supported or dependencies are missing
     """
     if provider == "openrouter":
         return OpenRouterLLMClient(
@@ -84,6 +88,8 @@ def get_llm_client(
             **kwargs,
         )
     elif provider == "ollama":
+        if not OLLAMA_AVAILABLE:
+            raise ValueError("ollama provider is not available. Please install the required dependencies.")
         return OllamaLLMClient(
             base_url=base_url,
             api_key=api_key,
@@ -128,7 +134,7 @@ def get_llm_client_instructor(
     Get an LLM client instance with instructor support based on the specified provider.
 
     Args:
-        provider: LLM provider to use ("openrouter", "openai", "ollama", "llamacpp", "litellm")
+        provider: LLM provider to use ("openrouter", "openai", "litellm" always available; "ollama", "llamacpp" require optional dependencies)
         base_url: Base URL for API (used by openai and ollama providers)
         api_key: API key for authentication (used by openai and openrouter providers)
         chat_model: Model to use for chat completions
@@ -141,7 +147,7 @@ def get_llm_client_instructor(
         LLMClient instance with instructor enabled for the specified provider
 
     Raises:
-        ValueError: If provider is not supported
+        ValueError: If provider is not supported or dependencies are missing
     """
     return get_llm_client(
         provider=provider,
