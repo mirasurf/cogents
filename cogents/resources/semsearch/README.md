@@ -49,7 +49,7 @@ The semantic search module provides intelligent document retrieval capabilities 
 ### Basic Usage
 
 ```python
-from cogents.capabilities.semsearch import SemanticSearch
+from cogents.resources.semsearch import SemanticSearch
 
 # Initialize semantic search
 search_system = SemanticSearch()
@@ -73,7 +73,7 @@ if search_system.connect():
 ### Advanced Configuration
 
 ```python
-from cogents.capabilities.semsearch import (
+from cogents.resources.semsearch import (
     SemanticSearch, SemanticSearchConfig, 
     WeaviateConfig, ChunkingConfig
 )

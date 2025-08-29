@@ -2,7 +2,7 @@ import uuid
 
 import pytest
 
-from cogents.capabilities.vectorstore.weaviate import WeaviateVectorStore
+from cogents.resources.vectorstore.weaviate import WeaviateVectorStore
 
 
 @pytest.mark.integration

@@ -9,8 +9,8 @@ from typing import Optional
 
 from langchain_core.tools import tool
 
-from cogents.capabilities.websearch.types import SearchResult
 from cogents.common.logging import get_logger
+from cogents.resources.websearch.types import SearchResult
 
 logger = get_logger(__name__)
 
@@ -56,7 +56,7 @@ def tavily_search(
     logger.info(f"Performing Tavily search for query: {query}")
 
     try:
-        from cogents.capabilities.websearch import TavilySearchWrapper
+        from cogents.resources.websearch import TavilySearchWrapper
 
         # Initialize Tavily Search client with configuration
         config_kwargs = {
@@ -134,7 +134,7 @@ def google_ai_search(
     logger.info(f"Performing Google AI search for query: {query}")
 
     try:
-        from cogents.capabilities.websearch import GoogleAISearch
+        from cogents.resources.websearch import GoogleAISearch
 
         # Initialize Google AI Search client
         google = GoogleAISearch()
