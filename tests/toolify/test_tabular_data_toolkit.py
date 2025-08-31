@@ -148,6 +148,7 @@ class TestTabularDataToolkit:
             finally:
                 Path(f.name).unlink()
 
+    @pytest.mark.integration
     async def test_get_column_info_success(self, tabular_toolkit, sample_csv_file):
         """Test successful column info retrieval."""
         result = await tabular_toolkit.get_column_info(sample_csv_file)
@@ -155,6 +156,7 @@ class TestTabularDataToolkit:
         assert isinstance(result, str)
         assert "Column" in result  # Should contain column information
 
+    @pytest.mark.integration
     async def test_get_column_info_string_column(self, tabular_toolkit, sample_csv_file):
         """Test column info for string column."""
         result = await tabular_toolkit.get_column_info(sample_csv_file)
@@ -162,6 +164,7 @@ class TestTabularDataToolkit:
         assert isinstance(result, str)
         assert "Column" in result  # Should contain column information
 
+    @pytest.mark.integration
     async def test_get_column_info_nonexistent_column(self, tabular_toolkit, sample_csv_file):
         """Test column info for non-existent column."""
         result = await tabular_toolkit.get_column_info(sample_csv_file)
@@ -169,6 +172,7 @@ class TestTabularDataToolkit:
         assert isinstance(result, str)
         assert "Column" in result  # Should contain column information
 
+    @pytest.mark.integration
     async def test_get_column_info_file_not_found(self, tabular_toolkit):
         """Test column info with file not found."""
         result = await tabular_toolkit.get_column_info("/nonexistent/file.csv")
@@ -215,6 +219,7 @@ class TestTabularDataToolkitEdgeCases:
             finally:
                 Path(f.name).unlink()
 
+    @pytest.mark.integration
     async def test_dataset_with_missing_values(self, tabular_toolkit):
         """Test handling of datasets with missing values."""
         # Create CSV with missing values
