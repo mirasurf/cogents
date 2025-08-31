@@ -131,7 +131,12 @@ class TestDocumentToolkit:
         """Test handling URL document path."""
         mock_response = AsyncMock()
         mock_response.status = 200
-        mock_response.content.iter_chunked.return_value = [b"PDF content"]
+
+        # Create a proper async iterator mock for content chunks
+        async def mock_iter_chunked(size):
+            yield b"PDF content"
+
+        mock_response.content.iter_chunked = mock_iter_chunked
         mock_response.raise_for_status = MagicMock()  # Not async
         mock_get.return_value.__aenter__.return_value = mock_response
 
