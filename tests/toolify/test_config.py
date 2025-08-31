@@ -3,7 +3,7 @@ Tests for toolkit configuration system.
 """
 
 
-from cogents.tools.config import ToolkitConfig, create_toolkit_config
+from cogents.toolify.config import ToolkitConfig, create_toolkit_config
 
 
 class TestToolkitConfig:

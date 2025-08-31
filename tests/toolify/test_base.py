@@ -6,8 +6,8 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from cogents.tools.base import AsyncBaseToolkit, BaseToolkit, ToolConverter, ToolkitError
-from cogents.tools.config import ToolkitConfig
+from cogents.toolify.base import AsyncBaseToolkit, BaseToolkit, ToolConverter, ToolkitError
+from cogents.toolify.config import ToolkitConfig
 
 
 class MockSyncToolkit(BaseToolkit):
@@ -120,7 +120,7 @@ class TestBaseToolkit:
         with pytest.raises(ToolkitError, match="Tool 'tool2' not found"):
             toolkit.call_tool("tool2", x="test")
 
-    @patch("cogents.tools.base.ToolConverter.function_to_langchain")
+    @patch("cogents.toolify.base.ToolConverter.function_to_langchain")
     def test_get_langchain_tools(self, mock_converter):
         """Test getting LangChain tools."""
         mock_tool = Mock()
@@ -228,12 +228,12 @@ class TestToolConverter:
             """Test function docstring."""
             return f"result: {x}"
 
-        with patch("cogents.tools.base.tool") as mock_tool:
+        with patch("cogents.toolify.base.tool") as mock_tool:
             mock_tool.return_value = lambda f: f  # Mock decorator
 
             ToolConverter.function_to_langchain(test_func)
 
-            mock_tool.assert_called_once_with(name="test_func", description="Test function docstring.")
+            mock_tool.assert_called_once_with("test_func", description="Test function docstring.")
 
     def test_function_to_langchain_with_custom_name_desc(self):
         """Test converting function with custom name and description."""
@@ -241,9 +241,9 @@ class TestToolConverter:
         def test_func(x: str) -> str:
             return f"result: {x}"
 
-        with patch("cogents.tools.base.tool") as mock_tool:
+        with patch("cogents.toolify.base.tool") as mock_tool:
             mock_tool.return_value = lambda f: f
 
             ToolConverter.function_to_langchain(test_func, name="custom_name", description="custom description")
 
-            mock_tool.assert_called_once_with(name="custom_name", description="custom description")
+            mock_tool.assert_called_once_with("custom_name", description="custom description")

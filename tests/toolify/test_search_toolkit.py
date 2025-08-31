@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, Mock, patch
 import aiohttp
 import pytest
 
-from cogents.tools import ToolkitConfig, get_toolkit
+from cogents.toolify import ToolkitConfig, get_toolkit
 
 
 @pytest.fixture
@@ -106,8 +106,8 @@ class TestSearchToolkit:
         assert isinstance(result, str)
         assert "Error" in result
 
-    @patch("cogents.tools.toolkits.search_toolkit.SearchToolkit.get_web_content")
-    @patch("cogents.tools.toolkits.search_toolkit.SearchToolkit.llm_client")
+    @patch("cogents.toolify.toolkits.search_toolkit.SearchToolkit.get_web_content")
+    @patch("cogents.toolify.toolkits.search_toolkit.SearchToolkit.llm_client")
     async def test_web_qa_with_question(self, mock_llm, mock_get_web_content, search_toolkit):
         """Test web Q&A with a specific question."""
         # Mock content extraction
@@ -123,8 +123,8 @@ class TestSearchToolkit:
         # LLM is called twice: once for answering and once for extracting related links
         assert mock_llm.completion.call_count == 2
 
-    @patch("cogents.tools.toolkits.search_toolkit.SearchToolkit.get_web_content")
-    @patch("cogents.tools.toolkits.search_toolkit.SearchToolkit.llm_client")
+    @patch("cogents.toolify.toolkits.search_toolkit.SearchToolkit.get_web_content")
+    @patch("cogents.toolify.toolkits.search_toolkit.SearchToolkit.llm_client")
     async def test_web_qa_summary(self, mock_llm, mock_get_web_content, search_toolkit):
         """Test web Q&A for content summary."""
         # Mock content extraction

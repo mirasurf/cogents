@@ -19,7 +19,7 @@ A unified toolkit system for LLM-based agents with support for LangChain tools, 
 
 ```python
 import asyncio
-from cogents.tools import get_toolkit, ToolkitConfig
+from cogents.toolify import get_toolkit, ToolkitConfig
 
 async def main():
     # Create a toolkit with configuration
@@ -44,7 +44,7 @@ asyncio.run(main())
 ### Multiple Toolkits
 
 ```python
-from cogents.tools import get_toolkits_map, ToolkitConfig
+from cogents.toolify import get_toolkits_map, ToolkitConfig
 
 # Configure multiple toolkits
 configs = {
@@ -168,7 +168,7 @@ result = await toolkit.call_tool("run_bash", command="cd /tmp && pwd")
 The toolkit system supports Model Context Protocol (MCP) servers for external tool integration.
 
 ```python
-from cogents.tools import create_mcp_toolkit
+from cogents.toolify import create_mcp_toolkit
 
 # Create MCP toolkit
 mcp_toolkit = create_mcp_toolkit(
@@ -197,7 +197,7 @@ async with mcp_toolkit:
 The `ToolkitConfig` class provides unified configuration for all toolkit types:
 
 ```python
-from cogents.tools import ToolkitConfig
+from cogents.toolify import ToolkitConfig
 
 config = ToolkitConfig(
     # Core configuration
@@ -256,7 +256,7 @@ agent = create_openai_functions_agent(
 ### Synchronous Toolkit
 
 ```python
-from cogents.tools import BaseToolkit, register_toolkit
+from cogents.toolify import BaseToolkit, register_toolkit
 from typing import Dict, Callable
 
 @register_toolkit("my_custom")
@@ -274,7 +274,7 @@ class MyCustomToolkit(BaseToolkit):
 ### Asynchronous Toolkit
 
 ```python
-from cogents.tools import AsyncBaseToolkit, register_toolkit
+from cogents.toolify import AsyncBaseToolkit, register_toolkit
 from typing import Dict, Callable
 
 @register_toolkit("my_async_custom")
@@ -296,7 +296,7 @@ class MyAsyncCustomToolkit(AsyncBaseToolkit):
 The toolkit registry automatically discovers and manages available toolkits:
 
 ```python
-from cogents.tools import ToolkitRegistry
+from cogents.toolify import ToolkitRegistry
 
 # List all registered toolkits
 toolkits = ToolkitRegistry.list_toolkits()
@@ -314,7 +314,7 @@ toolkit = ToolkitRegistry.create_toolkit("python_executor", config)
 The system provides comprehensive error handling:
 
 ```python
-from cogents.tools import ToolkitError, MCPNotAvailableError
+from cogents.toolify import ToolkitError, MCPNotAvailableError
 
 try:
     result = await toolkit.call_tool("nonexistent_tool")

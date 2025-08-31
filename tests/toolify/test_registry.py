@@ -4,9 +4,9 @@ Tests for toolkit registry system.
 
 import pytest
 
-from cogents.tools.base import AsyncBaseToolkit, BaseToolkit
-from cogents.tools.config import ToolkitConfig
-from cogents.tools.registry import ToolkitRegistry, get_toolkit, get_toolkits_map, register_toolkit
+from cogents.toolify.base import AsyncBaseToolkit, BaseToolkit
+from cogents.toolify.config import ToolkitConfig
+from cogents.toolify.registry import ToolkitRegistry, get_toolkit, get_toolkits_map, register_toolkit
 
 
 class MockSyncToolkit(BaseToolkit):

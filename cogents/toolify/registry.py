@@ -200,7 +200,7 @@ def _discover_builtin_toolkits():
             continue
 
         try:
-            module_name = f"cogents.tools.toolkits.{module_info.name}"
+            module_name = f"cogents.toolify.toolkits.{module_info.name}"
             importlib.import_module(module_name)
             logger.debug(f"Discovered toolkit module: {module_name}")
         except ImportError as e:

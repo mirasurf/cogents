@@ -7,7 +7,7 @@ from the search toolkit.
 
 import asyncio
 
-from cogents.tools.toolkits.search_toolkit import SearchToolkit
+from cogents.toolify.toolkits.search_toolkit import SearchToolkit
 
 
 async def example_tavily_search():

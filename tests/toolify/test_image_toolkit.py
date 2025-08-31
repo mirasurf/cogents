@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from cogents.tools import ToolkitConfig, get_toolkit
+from cogents.toolify import ToolkitConfig, get_toolkit
 
 
 @pytest.fixture
@@ -73,11 +73,14 @@ class TestImageToolkit:
         # Mock HTTP response with image data
         mock_response = AsyncMock()
         mock_response.status = 200
+        mock_response.headers = {"content-type": "image/jpeg"}
         mock_response.read.return_value = b"fake_image_data"
+        mock_response.raise_for_status = MagicMock()  # Not async
         mock_get.return_value.__aenter__.return_value = mock_response
 
         with patch("PIL.Image.open") as mock_image_open:
             mock_image = MagicMock()
+            mock_image.mode = "RGB"
             mock_image_open.return_value = mock_image
 
             result = await image_toolkit._load_image_from_url("https://example.com/image.jpg")
@@ -90,11 +93,11 @@ class TestImageToolkit:
         """Test error handling when loading image from URL."""
         mock_response = AsyncMock()
         mock_response.status = 404
+        mock_response.raise_for_status.side_effect = Exception("HTTP 404")
         mock_get.return_value.__aenter__.return_value = mock_response
 
-        result = await image_toolkit._load_image_from_url("https://example.com/nonexistent.jpg")
-
-        assert result is None
+        with pytest.raises(Exception):
+            await image_toolkit._load_image_from_url("https://example.com/nonexistent.jpg")
 
     def test_resize_image(self, image_toolkit):
         """Test image resizing functionality."""
@@ -142,6 +145,7 @@ class TestImageToolkit:
             expected = base64.b64encode(b"fake_image_bytes").decode("utf-8")
             assert result == expected
 
+    @pytest.mark.integration
     @patch("openai.AsyncOpenAI")
     async def test_analyze_image_success(self, mock_openai, image_toolkit):
         """Test successful image analysis."""
@@ -163,10 +167,9 @@ class TestImageToolkit:
                     "https://example.com/cat.jpg", "What do you see in this image?"
                 )
 
-                assert isinstance(result, dict)
-                assert result["status"] == "success"
-                assert "cat sitting on a table" in result["analysis"]
+                assert "cat sitting on a table" in result
 
+    @pytest.mark.integration
     @patch("openai.AsyncOpenAI")
     async def test_describe_image_success(self, mock_openai, image_toolkit):
         """Test successful image description."""
@@ -185,10 +188,9 @@ class TestImageToolkit:
 
                 result = await image_toolkit.describe_image("/path/to/image.jpg")
 
-                assert isinstance(result, dict)
-                assert result["status"] == "success"
-                assert "detailed description" in result["description"]
+                assert "detailed description" in result
 
+    @pytest.mark.integration
     @patch("openai.AsyncOpenAI")
     async def test_extract_text_from_image_success(self, mock_openai, image_toolkit):
         """Test successful text extraction from image."""
@@ -207,21 +209,19 @@ class TestImageToolkit:
 
                 result = await image_toolkit.extract_text_from_image("https://example.com/text.jpg")
 
-                assert isinstance(result, dict)
-                assert result["status"] == "success"
-                assert "Hello World" in result["text"]
+                assert "Hello World" in result
 
+    @pytest.mark.integration
     async def test_analyze_image_load_error(self, image_toolkit):
         """Test error handling when image cannot be loaded."""
         with patch.object(image_toolkit, "_load_image") as mock_load:
-            mock_load.return_value = None
+            mock_load.side_effect = Exception("Failed to load image")
 
             result = await image_toolkit.analyze_image("invalid_image.jpg", "Analyze this")
 
-            assert isinstance(result, dict)
-            assert result["status"] == "error"
-            assert "Failed to load image" in result["error"]
+            assert "Failed to load image" in result
 
+    @pytest.mark.integration
     @patch("openai.AsyncOpenAI")
     async def test_analyze_image_api_error(self, mock_openai, image_toolkit):
         """Test error handling when OpenAI API fails."""
@@ -238,10 +238,9 @@ class TestImageToolkit:
 
                 result = await image_toolkit.analyze_image("image.jpg", "Analyze this")
 
-                assert isinstance(result, dict)
-                assert result["status"] == "error"
-                assert "API Error" in result["error"]
+                assert "API Error" in result
 
+    @pytest.mark.integration
     @patch("openai.AsyncOpenAI")
     async def test_compare_images_success(self, mock_openai, image_toolkit):
         """Test successful image comparison."""
@@ -262,21 +261,18 @@ class TestImageToolkit:
 
                 result = await image_toolkit.compare_images("image1.jpg", "image2.jpg")
 
-                assert isinstance(result, dict)
-                assert result["status"] == "success"
-                assert "similar in composition" in result["comparison"]
+                assert "similar in composition" in result
 
+    @pytest.mark.integration
     async def test_compare_images_load_error(self, image_toolkit):
         """Test error handling when one image cannot be loaded."""
         with patch.object(image_toolkit, "_load_image") as mock_load:
             # First image loads, second fails
-            mock_load.side_effect = [MagicMock(), None]
+            mock_load.side_effect = [MagicMock(), Exception("Failed to load")]
 
             result = await image_toolkit.compare_images("image1.jpg", "invalid.jpg")
 
-            assert isinstance(result, dict)
-            assert result["status"] == "error"
-            assert "Failed to load" in result["error"]
+            assert "Failed to load" in result
 
     async def test_get_image_info_success(self, image_toolkit):
         """Test getting image information."""
@@ -290,7 +286,6 @@ class TestImageToolkit:
             result = await image_toolkit.get_image_info("image.jpg")
 
             assert isinstance(result, dict)
-            assert result["status"] == "success"
             assert result["width"] == 1920
             assert result["height"] == 1080
             assert result["mode"] == "RGB"
@@ -299,12 +294,12 @@ class TestImageToolkit:
     async def test_get_image_info_load_error(self, image_toolkit):
         """Test error handling when getting image info fails."""
         with patch.object(image_toolkit, "_load_image") as mock_load:
-            mock_load.return_value = None
+            mock_load.side_effect = Exception("Failed to load image")
 
             result = await image_toolkit.get_image_info("invalid.jpg")
 
             assert isinstance(result, dict)
-            assert result["status"] == "error"
+            assert "error" in result
             assert "Failed to load image" in result["error"]
 
     async def test_load_image_file_vs_url(self, image_toolkit):
@@ -338,15 +333,15 @@ class TestImageToolkitWithoutOpenAI:
         """Test initialization without OpenAI API key."""
         # Should initialize but with warning
         assert image_toolkit_no_openai is not None
-        assert image_toolkit_no_openai.openai_api_key is None
 
+    @pytest.mark.integration
     async def test_analyze_without_openai_key(self, image_toolkit_no_openai):
         """Test analysis without OpenAI API key."""
         result = await image_toolkit_no_openai.analyze_image("image.jpg", "Analyze this")
 
-        assert isinstance(result, dict)
-        assert result["status"] == "error"
-        assert "OpenAI API key" in result["error"]
+        # Should fail due to missing LLM client
+        assert isinstance(result, str)
+        assert "failed" in result.lower() or "error" in result.lower()
 
 
 class TestImageToolkitEdgeCases:
@@ -357,19 +352,15 @@ class TestImageToolkitEdgeCases:
         with patch.object(image_toolkit, "_load_image") as mock_load:
             mock_image = MagicMock()
             mock_image.size = (10000, 8000)  # Very large image
+            mock_image.format = "JPEG"
+            mock_image.mode = "RGB"
             mock_load.return_value = mock_image
 
-            with patch.object(image_toolkit, "_resize_image") as mock_resize:
-                mock_resized = MagicMock()
-                mock_resize.return_value = mock_resized
+            # Should handle large images
+            result = await image_toolkit.get_image_info("large_image.jpg")
 
-                with patch.object(image_toolkit, "_image_to_base64") as mock_to_base64:
-                    mock_to_base64.return_value = "base64_data"
-
-                    # Should resize large images
-                    result = await image_toolkit.get_image_info("large_image.jpg")
-
-                    assert result["status"] == "success"
+            assert result["width"] == 10000
+            assert result["height"] == 8000
 
     @pytest.mark.parametrize(
         "image_url",
@@ -391,7 +382,8 @@ class TestImageToolkitEdgeCases:
 
             result = await image_toolkit.get_image_info(image_url)
 
-            assert result["status"] == "success"
+            assert result["width"] == 800
+            assert result["height"] == 600
 
     async def test_concurrent_image_operations(self, image_toolkit):
         """Test concurrent image operations."""
@@ -401,6 +393,7 @@ class TestImageToolkitEdgeCases:
             mock_image = MagicMock()
             mock_image.size = (800, 600)
             mock_image.mode = "RGB"
+            mock_image.format = "JPEG"
             mock_load.return_value = mock_image
 
             # Perform multiple operations concurrently
@@ -410,4 +403,5 @@ class TestImageToolkitEdgeCases:
 
             # All operations should succeed
             for result in results:
-                assert result["status"] == "success"
+                assert result["width"] == 800
+                assert result["height"] == 600

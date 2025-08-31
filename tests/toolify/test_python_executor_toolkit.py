@@ -7,7 +7,7 @@ import tempfile
 
 import pytest
 
-from cogents.tools import ToolkitConfig, get_toolkit
+from cogents.toolify import ToolkitConfig, get_toolkit
 
 
 @pytest.fixture

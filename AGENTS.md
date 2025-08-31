@@ -93,14 +93,46 @@ For llamacpp provider, you can set:
 
 ## Testing
 
-- Integration tests are in `tests/integration/`
-- Unit tests are in `tests/unit/`
+- Integration tests are marked as `pytest.mark.integration`
 - Use `make test-unit` to run unit tests
 - Use `make test-integration` to run integration tests
 - Use `make test` to run all tests
 - Use `poetry run pytest tests/` to run all tests (manual)
 - Use `poetry run pytest -m integration` for integration tests only (manual)
 - Use `poetry run pytest -m "not slow"` to skip slow tests (manual)
+
+### Test Classification Rules
+
+**Integration Tests**: Mark tests with `@pytest.mark.integration` if they:
+- Depend on external API services (OpenAI, OpenRouter, Gemini, etc.)
+- Require network connectivity to third-party services
+- Need API keys or authentication tokens
+- Make actual HTTP requests to external services
+
+**Unit Tests**: Tests that can run locally without external dependencies:
+- Use mocked external services
+- Test local functionality only (file operations, data processing, etc.)
+- Don't require network connectivity
+- Can run in isolated environments
+
+**Examples:**
+```python
+# Integration test - requires OpenAI API
+@pytest.mark.integration
+async def test_analyze_image_with_openai(self, image_toolkit):
+    result = await image_toolkit.analyze_image("image.jpg", "Describe this")
+    assert "description" in result
+
+# Unit test - uses mocks, runs locally
+async def test_get_image_info_success(self, image_toolkit):
+    with patch.object(image_toolkit, "_load_image") as mock_load:
+        mock_image = MagicMock()
+        mock_image.size = (800, 600)
+        mock_load.return_value = mock_image
+
+        result = await image_toolkit.get_image_info("image.jpg")
+        assert result["width"] == 800
+```
 
 ## Code Quality
 

@@ -74,14 +74,19 @@ class ToolConverter:
         Returns:
             LangChain BaseTool instance
         """
-        # Create a wrapper function with the desired name and description
-        tool_func = func
-        if name and name != func.__name__:
-            tool_func.__name__ = name
-        if description and description != func.__doc__:
-            tool_func.__doc__ = description
-
-        return tool(tool_func)
+                # Use function name if no name provided
+        tool_name = name if name is not None else func.__name__
+        
+        # Use function docstring if no description provided
+        if description is not None:
+            tool_description = description
+        else:
+            # Use docstring and clean it up (add period if needed)
+            tool_description = func.__doc__ or ""
+            if tool_description and not tool_description.endswith("."):
+                tool_description = tool_description.strip() + "."
+        
+        return tool(tool_name, description=tool_description)(func)
 
 
 class BaseToolkit(abc.ABC):
