@@ -74,9 +74,9 @@ class ToolConverter:
         Returns:
             LangChain BaseTool instance
         """
-                # Use function name if no name provided
+        # Use function name if no name provided
         tool_name = name if name is not None else func.__name__
-        
+
         # Use function docstring if no description provided
         if description is not None:
             tool_description = description
@@ -85,7 +85,7 @@ class ToolConverter:
             tool_description = func.__doc__ or ""
             if tool_description and not tool_description.endswith("."):
                 tool_description = tool_description.strip() + "."
-        
+
         return tool(tool_name, description=tool_description)(func)
 
 
