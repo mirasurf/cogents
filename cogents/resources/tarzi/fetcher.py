@@ -8,7 +8,7 @@ Provides web content fetching capabilities using the tarzi library with support 
 """
 
 from enum import Enum
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from cogents.common.llm import get_llm_client
 from cogents.common.logging import get_logger
@@ -36,9 +36,7 @@ class TarziFetcher:
 
     def __init__(
         self,
-        llm_provider: str = "llamacpp",
-        llm_api_key: Optional[str] = None,
-        llm_base_url: Optional[str] = None,
+        llm_provider: str = "openrouter",
         fetch_mode: str = "browser_headless",
         timeout: int = 30,
     ):
@@ -46,15 +44,11 @@ class TarziFetcher:
         Initialize the TarziFetcher.
 
         Args:
-            llm_provider: LLM provider for content formatting ("llamacpp", "openai", "ollama", etc.)
-            llm_api_key: API key for the LLM provider (optional, can use env vars)
-            llm_base_url: Base URL for the LLM provider (optional)
-            fetch_mode: Tarzi fetch mode ("plain_request", "browser_headless", "browser_headed")
+            llm_provider: LLM provider for content formatting ("openrouter", "llamacpp", "openai", "ollama", etc.)
+            fetch_mode: Fetch mode for tarzi ("plain_request", "browser_head", "browser_headless")
             timeout: Request timeout in seconds
         """
         self.llm_provider = llm_provider
-        self.llm_api_key = llm_api_key
-        self.llm_base_url = llm_base_url
         self.fetch_mode = fetch_mode
         self.timeout = timeout
 
@@ -69,22 +63,10 @@ class TarziFetcher:
         """Setup LLM client for content formatting."""
         try:
             if self.llm_provider:
-                if self.llm_provider == "llamacpp":
-                    self._llm_client = get_llm_client(
-                        provider=self.llm_provider,
-                    )
-                    logger.info(f"Initialized LLM client with provider: {self.llm_provider}")
-                else:
-                    # For other providers, use api_key
-                    if self.llm_api_key:
-                        self._llm_client = get_llm_client(
-                            provider=self.llm_provider,
-                            api_key=self.llm_api_key,
-                            base_url=self.llm_base_url,
-                        )
-                        logger.info(f"Initialized LLM client with provider: {self.llm_provider}")
-                    else:
-                        logger.warning("LLM API key not configured - LLM_FORMATTED mode will be unavailable")
+                self._llm_client = get_llm_client(
+                    provider=self.llm_provider,
+                )
+                logger.info(f"Initialized LLM client with provider: {self.llm_provider}")
             else:
                 logger.warning("LLM provider not configured - LLM_FORMATTED mode will be unavailable")
         except Exception as e:
@@ -136,24 +118,14 @@ format = "html"
             ValueError: If content_mode is invalid or configuration is missing
             Exception: If fetching fails
         """
-        if not isinstance(content_mode, ContentMode):
-            # Allow string values for backward compatibility
-            if isinstance(content_mode, str):
-                try:
-                    content_mode = ContentMode(content_mode)
-                except ValueError:
-                    raise ValueError(f"Invalid content_mode: {content_mode}")
-            else:
-                raise ValueError(f"content_mode must be ContentMode enum or string, got {type(content_mode)}")
-
-        logger.info(f"Fetching content from {url} with mode: {content_mode.value}")
-
         try:
             if content_mode == ContentMode.RAW_HTML:
                 return self._fetch_raw_html(url, **kwargs)
             elif content_mode == ContentMode.MARKDOWN:
                 return self._fetch_markdown(url, **kwargs)
             elif content_mode == ContentMode.LLM_FORMATTED:
+                if self._llm_client is None:
+                    raise ValueError("LLM client not configured - cannot use LLM_FORMATTED mode")
                 return self._fetch_llm_formatted(url, **kwargs)
             else:
                 raise ValueError(f"Unsupported content mode: {content_mode}")
@@ -226,7 +198,7 @@ Please provide a clean, well-structured version of the main content:"""
             response = self._llm_client.completion(
                 messages=[{"role": "user", "content": full_prompt}],
                 temperature=0.1,
-                max_tokens=2000,
+                max_tokens=100000,
             )
             return response.strip()
         except Exception as e:
@@ -234,34 +206,3 @@ Please provide a clean, well-structured version of the main content:"""
             # Fallback to markdown if LLM fails
             logger.warning("Falling back to markdown format due to LLM failure")
             return clean_content
-
-    def fetch_raw(
-        self,
-        url: str,
-        fetch_mode: Optional[str] = None,
-    ) -> str:
-        """
-        Fetch raw content using tarzi without any formatting.
-
-        Args:
-            url: URL to fetch
-            fetch_mode: Override default fetch mode
-
-        Returns:
-            Raw content as returned by tarzi
-        """
-        mode = fetch_mode or self.fetch_mode
-        return self._web_fetcher.fetch_raw(url, mode)
-
-    def get_supported_modes(self) -> Dict[str, str]:
-        """
-        Get supported content modes and their descriptions.
-
-        Returns:
-            Dictionary mapping mode names to descriptions
-        """
-        return {
-            ContentMode.RAW_HTML.value: "Raw HTML content from tarzi",
-            ContentMode.MARKDOWN.value: "Markdown content formatted by tarzi",
-            ContentMode.LLM_FORMATTED.value: "Raw content formatted by LLM provider",
-        }

@@ -7,7 +7,7 @@ Provides web search capabilities using the tarzi library with support for:
 """
 
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Union
+from typing import List
 
 from cogents.common.logging import get_logger
 
@@ -45,25 +45,19 @@ class TarziSearcher:
 
     def __init__(
         self,
-        search_engine: str = "duckduckgo",
-        fetcher_config: Optional[Dict[str, Any]] = None,
+        search_engine: str = "bing",
     ):
         """
         Initialize the TarziSearcher.
 
         Args:
             search_engine: Search engine to use ("google", "bing", "duckduckgo", etc.)
-            fetcher_config: Configuration for the TarziFetcher (used in search_and_fetch)
         """
         self.search_engine = search_engine
         self.search_mode = "webquery"  # Always use webquery mode
 
         # Initialize tarzi components
         self._setup_tarzi()
-
-        # Initialize TarziFetcher for search_and_fetch operations
-        fetcher_config = fetcher_config or {}
-        self._fetcher = TarziFetcher(**fetcher_config)
 
     def _setup_tarzi(self) -> None:
         """Setup tarzi search components with configuration."""
@@ -133,13 +127,12 @@ limit = 10
             logger.error(f"Search failed for query '{query}': {e}")
             raise
 
-    def search_and_fetch(
+    def search_with_content(
         self,
         query: str,
         max_results: int = 5,
         content_mode: ContentMode = ContentMode.LLM_FORMATTED,
-        fetch_mode: Optional[str] = None,
-        **fetch_kwargs: Any,
+        fetch_mode: str = "plain_request",
     ) -> List[SearchWithContentResult]:
         """
         Perform a web search and fetch content from the results.
@@ -148,8 +141,7 @@ limit = 10
             query: Search query string
             max_results: Maximum number of results to return
             content_mode: Content formatting mode for fetched content
-            fetch_mode: Override default fetch mode for tarzi
-            **fetch_kwargs: Additional arguments passed to content fetching
+            fetch_mode: Fetch mode for tarzi ("plain_request", "browser_head", "browser_headless")
 
         Returns:
             List of SearchWithContentResult objects
@@ -157,52 +149,22 @@ limit = 10
         Raises:
             Exception: If search or fetching fails
         """
-        content_mode_str = content_mode.value if isinstance(content_mode, ContentMode) else content_mode
-        logger.info(
-            f"Search and fetch for '{query}' with mode: {self.search_mode}, "
-            f"max_results: {max_results}, content_mode: {content_mode_str}"
-        )
-
         try:
-            # Option 1: Use tarzi's built-in search_and_fetch if using tarzi's native modes
-            if self._can_use_tarzi_search_and_fetch(content_mode, fetch_mode):
-                return self._search_and_fetch_tarzi_native(query, max_results, content_mode, fetch_mode, **fetch_kwargs)
-
-            # Option 2: Search first, then fetch content using our TarziFetcher
-            return self._search_and_fetch_separate(query, max_results, content_mode, **fetch_kwargs)
+            if content_mode in [ContentMode.RAW_HTML, ContentMode.MARKDOWN]:
+                return self._search_with_content_tarzi_native(query, max_results, content_mode, fetch_mode)
+            else:
+                return self._search_with_content_separate(query, max_results, content_mode, fetch_mode)
 
         except Exception as e:
-            logger.error(f"Search and fetch failed for query '{query}': {e}")
+            logger.error(f"Search with content failed for query '{query}': {e}")
             raise
 
-    def _can_use_tarzi_search_and_fetch(self, content_mode: Union[ContentMode, str], fetch_mode: Optional[str]) -> bool:
-        """
-        Check if we can use tarzi's native search_and_fetch function.
-
-        Args:
-            content_mode: Content formatting mode
-            fetch_mode: Fetch mode
-
-        Returns:
-            True if we can use tarzi's native function, False otherwise
-        """
-        # Convert string to ContentMode if needed
-        if isinstance(content_mode, str):
-            try:
-                content_mode = ContentMode(content_mode)
-            except ValueError:
-                return False
-
-        # We can use tarzi's native function for RAW_HTML and MARKDOWN modes
-        return content_mode in [ContentMode.RAW_HTML, ContentMode.MARKDOWN]
-
-    def _search_and_fetch_tarzi_native(
+    def _search_with_content_tarzi_native(
         self,
         query: str,
         max_results: int,
         content_mode: ContentMode,
-        fetch_mode: Optional[str],
-        **fetch_kwargs: Any,
+        fetch_mode: str,
     ) -> List[SearchWithContentResult]:
         """
         Use tarzi's native search_and_fetch function.
@@ -211,9 +173,6 @@ limit = 10
             query: Search query
             max_results: Maximum results
             content_mode: Content mode
-            fetch_mode: Fetch mode
-            **fetch_kwargs: Additional fetch arguments
-
         Returns:
             List of SearchWithContentResult objects
         """
@@ -221,12 +180,9 @@ limit = 10
 
         # Map our content modes to tarzi formats
         tarzi_format = "html" if content_mode == ContentMode.RAW_HTML else "markdown"
-        tarzi_fetch_mode = fetch_mode or self._fetcher.fetch_mode
 
         # Use tarzi's search_and_fetch
-        results_with_content = tarzi.search_and_fetch(
-            query, self.search_mode, max_results, tarzi_fetch_mode, tarzi_format
-        )
+        results_with_content = tarzi.search_and_fetch(query, self.search_mode, max_results, fetch_mode, tarzi_format)
 
         # Convert to our format
         search_results = []
@@ -244,12 +200,12 @@ limit = 10
 
         return search_results
 
-    def _search_and_fetch_separate(
+    def _search_with_content_separate(
         self,
         query: str,
         max_results: int,
         content_mode: ContentMode,
-        **fetch_kwargs: Any,
+        fetch_mode: str = "plain_request",
     ) -> List[SearchWithContentResult]:
         """
         Search first, then fetch content separately using TarziFetcher.
@@ -258,7 +214,7 @@ limit = 10
             query: Search query
             max_results: Maximum results
             content_mode: Content mode
-            **fetch_kwargs: Additional fetch arguments
+            fetch_mode: Fetch mode for tarzi ("plain_request", "browser_head", "browser_headless")
 
         Returns:
             List of SearchWithContentResult objects
@@ -270,7 +226,8 @@ limit = 10
         results_with_content = []
         for result in search_results:
             try:
-                content = self._fetcher.fetch(result.url, content_mode, **fetch_kwargs)
+                fetcher = TarziFetcher(fetch_mode=fetch_mode)
+                content = fetcher.fetch(result.url, content_mode=content_mode)
                 search_with_content = SearchWithContentResult(result=result, content=content, content_mode=content_mode)
                 results_with_content.append(search_with_content)
             except Exception as e:
@@ -284,29 +241,3 @@ limit = 10
                 results_with_content.append(search_with_content)
 
         return results_with_content
-
-    def get_supported_engines(self) -> List[str]:
-        """
-        Get list of supported search engines.
-
-        Returns:
-            List of supported search engine names
-        """
-        return [
-            "google",
-            "bing",
-            "duckduckgo",
-            "brave",
-            "baidu",
-            "exa",
-            "travily",
-        ]
-
-    def get_supported_content_modes(self) -> Dict[str, str]:
-        """
-        Get supported content modes for search_and_fetch.
-
-        Returns:
-            Dictionary mapping mode names to descriptions
-        """
-        return self._fetcher.get_supported_modes()
