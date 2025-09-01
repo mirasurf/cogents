@@ -60,6 +60,7 @@ twisted = "^25.5.0"
 weaviate-client = "^4.9.0"
 # Web search
 tavily-python = "^0.3.0"
+tarzi = "^0.0.15"
 # Tools dependencies
 matplotlib = "^3.8.0"
 pexpect = "^4.9.0"

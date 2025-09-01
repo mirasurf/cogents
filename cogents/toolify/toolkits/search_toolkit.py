@@ -1,7 +1,7 @@
 """
 Search toolkit for web search and content retrieval.
 
-Provides tools for Google search, web content extraction, web-based Q&A,
+Provides tools for Google search, web content extraction using tarzi, web-based Q&A,
 Tavily search, and Google AI search functionality.
 """
 
@@ -12,6 +12,8 @@ from typing import Callable, Dict, Optional
 import aiohttp
 
 from cogents.common.logging import get_logger
+from cogents.resources.tarzi import TarziFetcher
+from cogents.resources.tarzi.fetcher import ContentMode
 from cogents.resources.websearch.types import SearchResult
 
 from ..base import AsyncBaseToolkit
@@ -32,12 +34,14 @@ class SearchToolkit(AsyncBaseToolkit):
 
     Provides functionality for:
     - Google search via Serper API
-    - Web content extraction via Jina Reader API
+    - Web content extraction via tarzi library
     - Web-based question answering
 
-    Required configuration:
-    - JINA_API_KEY: API key for Jina Reader service
+        Required configuration:
     - SERPER_API_KEY: API key for Serper Google search service
+
+    Optional configuration:
+    - tarzi_content_mode: Content extraction mode ("raw_html", "markdown", "llm_formatted")
     """
 
     def __init__(self, config: ToolkitConfig = None):
@@ -50,25 +54,40 @@ class SearchToolkit(AsyncBaseToolkit):
         super().__init__(config)
 
         # API configuration
-        self.jina_url_template = "https://r.jina.ai/{url}"
         self.serper_url = "https://google.serper.dev/search"
 
         # Get API keys from config
-        jina_api_key = self.config.config.get("JINA_API_KEY")
         serper_api_key = self.config.config.get("SERPER_API_KEY")
 
-        if not jina_api_key:
-            self.logger.warning("JINA_API_KEY not found in config - web content extraction may fail")
         if not serper_api_key:
             self.logger.warning("SERPER_API_KEY not found in config - Google search may fail")
 
-        self.jina_headers = {"Authorization": f"Bearer {jina_api_key}"} if jina_api_key else {}
         self.serper_headers = (
             {"X-API-KEY": serper_api_key, "Content-Type": "application/json"} if serper_api_key else {}
         )
 
         # Configuration
         self.summary_token_limit = self.config.config.get("summary_token_limit", 1000)
+        tarzi_content_mode = self.config.config.get("tarzi_content_mode", "llm_formatted")
+
+        # Initialize tarzi fetcher for web content extraction
+        try:
+            # Map string content mode to ContentMode enum
+            if tarzi_content_mode == "raw_html":
+                self._tarzi_content_mode = ContentMode.RAW_HTML
+            elif tarzi_content_mode == "markdown":
+                self._tarzi_content_mode = ContentMode.MARKDOWN
+            elif tarzi_content_mode == "llm_formatted":
+                self._tarzi_content_mode = ContentMode.LLM_FORMATTED
+            else:
+                self.logger.warning(f"Invalid tarzi_content_mode: {tarzi_content_mode}, using llm_formatted")
+                self._tarzi_content_mode = ContentMode.LLM_FORMATTED
+
+            self._tarzi_fetcher = TarziFetcher()
+            self.logger.info("Initialized tarzi fetcher for web content extraction")
+        except Exception as e:
+            self.logger.error(f"Failed to initialize tarzi fetcher: {e}")
+            self._tarzi_fetcher = None
 
     async def search_google_api(self, query: str, num_results: int = 5) -> str:
         """
@@ -157,7 +176,7 @@ class SearchToolkit(AsyncBaseToolkit):
 
     async def get_web_content(self, url: str) -> str:
         """
-        Extract readable content from a web page using Jina Reader API.
+        Extract readable content from a web page using tarzi library.
 
         Args:
             url: The URL to extract content from
@@ -167,15 +186,12 @@ class SearchToolkit(AsyncBaseToolkit):
         """
         self.logger.info(f"Extracting content from: {url}")
 
-        if not self.jina_headers.get("Authorization"):
-            raise ValueError("JINA_API_KEY not configured")
+        if not self._tarzi_fetcher:
+            raise ValueError("Tarzi fetcher not initialized - web content extraction unavailable")
 
         try:
-            jina_url = self.jina_url_template.format(url=url)
-            async with aiohttp.ClientSession() as session:
-                async with session.get(jina_url, headers=self.jina_headers) as response:
-                    response.raise_for_status()
-                    content = await response.text()
+            # Use tarzi to fetch content in the configured mode
+            content = self._tarzi_fetcher.fetch(url, self._tarzi_content_mode)
 
             self.logger.info(f"Extracted {len(content)} characters from {url}")
             return content
