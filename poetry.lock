@@ -359,6 +359,22 @@ files = [
 ]
 
 [[package]]
+name = "cdp-use"
+version = "1.4.0"
+description = "Type safe generator/client library for CDP"
+optional = false
+python-versions = ">=3.11"
+groups = ["main"]
+files = [
+    {file = "cdp_use-1.4.0-py3-none-any.whl", hash = "sha256:20e890a0c30d51f0c843872f7352311cb902d1d8324743b480401c596774c277"},
+    {file = "cdp_use-1.4.0.tar.gz", hash = "sha256:ad9b086fcf8b3d08a3eef8758449aea92836d0c72f240743b9bfabb7fc6d8467"},
+]
+
+[package.dependencies]
+httpx = ">=0.28.1"
+websockets = ">=15.0.1"
+
+[[package]]
 name = "certifi"
 version = "2025.8.3"
 description = "Python package for providing Mozilla's CA Bundle."
@@ -6245,4 +6261,4 @@ cffi = ["cffi (>=1.17) ; python_version >= \"3.13\" and platform_python_implemen
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.11"
-content-hash = "f0c37dff59829833005e081c1db232def70c837e58ee813ff180a98bff55b81b"
+content-hash = "e0800cfc9d64721f5ca107a44984bf21a8d5dead6b83dd6e97c889c057bbcb84"

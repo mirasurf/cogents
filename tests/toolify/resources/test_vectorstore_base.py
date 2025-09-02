@@ -2,9 +2,9 @@ import uuid
 
 import pytest
 
-from cogents.resources.vectorstore.base import BaseVectorStore
-from cogents.resources.vectorstore.pgvector import PGVectorStore
-from cogents.resources.vectorstore.weaviate import WeaviateVectorStore
+from cogents.toolify.resources.vectorstore.base import BaseVectorStore
+from cogents.toolify.resources.vectorstore.pgvector import PGVectorStore
+from cogents.toolify.resources.vectorstore.weaviate import WeaviateVectorStore
 
 
 @pytest.mark.integration

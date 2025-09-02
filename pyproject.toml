@@ -54,6 +54,7 @@ networkx = "^3.5"
 # MCP support
 mcp = "^1.0.0"
 twisted = "^25.5.0"
+cdp-use = "^1.4.0"
 
 [tool.poetry.group.toolkit.dependencies]
 # Vector database
