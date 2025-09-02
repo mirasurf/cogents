@@ -141,6 +141,7 @@ async def test_get_image_info_success(self, image_toolkit):
 - Use `make lint` to run linting (flake8, mypy)
 - Use `make quality` to run all quality checks
 - Use `make autofix` to auto-fix code quality issues
+- Keep the first-level folder stuctures of `cogents`, `examples`, and `tests` as the same.
 
 ## Development Environment Tips
 
