@@ -13,7 +13,7 @@ from cogents.toolify import ToolkitConfig, get_toolkit
 @pytest.fixture
 def search_config():
     """Create a test configuration for SearchToolkit."""
-    return ToolkitConfig(name="search", config={"SERPER_API_KEY": "test_key"})
+    return ToolkitConfig(name="search", config={"SERPER_API_KEY": "test_key", "JINA_API_KEY": "test_jina_key"})
 
 
 @pytest.fixture
@@ -81,29 +81,30 @@ class TestSearchToolkit:
         assert isinstance(result, str)
         assert "error" in result.lower() or "failed" in result.lower()
 
-    async def test_get_web_content_success(self, search_toolkit):
+    @patch("aiohttp.ClientSession.get")
+    async def test_get_web_content_success(self, mock_get, search_toolkit):
         """Test successful content extraction."""
-        # Mock the tarzi fetcher
-        with patch.object(search_toolkit._tarzi_fetcher, "fetch") as mock_fetch:
-            mock_fetch.return_value = "# Test Content\n\nThis is test content."
+        # Mock Jina Reader response
+        mock_response = AsyncMock()
+        mock_response.status = 200
+        mock_response.text = AsyncMock(return_value="# Test Content\n\nThis is test content.")
+        mock_get.return_value.__aenter__.return_value = mock_response
 
-            result = await search_toolkit.get_web_content("https://example.com")
+        result = await search_toolkit.get_web_content("https://example.com")
 
-            assert isinstance(result, str)
-            assert "Test Content" in result
-            mock_fetch.assert_called_once()
+        assert isinstance(result, str)
+        assert "Test Content" in result
 
-    async def test_get_web_content_error(self, search_toolkit):
+    @patch("aiohttp.ClientSession.get")
+    async def test_get_web_content_error(self, mock_get, search_toolkit):
         """Test content extraction error handling."""
-        # Mock the tarzi fetcher to raise an exception
-        with patch.object(search_toolkit._tarzi_fetcher, "fetch") as mock_fetch:
-            mock_fetch.side_effect = Exception("Connection failed")
+        # Mock the session.get to raise a generic exception
+        mock_get.side_effect = Exception("Connection failed")
 
-            result = await search_toolkit.get_web_content("https://example.com")
+        result = await search_toolkit.get_web_content("https://example.com")
 
-            assert isinstance(result, str)
-            assert "Error" in result
-            mock_fetch.assert_called_once()
+        assert isinstance(result, str)
+        assert "Error" in result
 
     @patch("cogents.toolify.toolkits.search_toolkit.SearchToolkit.get_web_content")
     @patch("cogents.toolify.toolkits.search_toolkit.SearchToolkit.llm_client")

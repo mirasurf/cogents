@@ -57,6 +57,7 @@ configs = {
     "search": ToolkitConfig(
         config={
             "SERPER_API_KEY": "your_api_key",
+            "JINA_API_KEY": "your_jina_key"
         }
     )
 }
@@ -112,6 +113,7 @@ Web search and content extraction capabilities.
 ```python
 config = ToolkitConfig(config={
     "SERPER_API_KEY": "your_serper_key",
+    "JINA_API_KEY": "your_jina_key"
 })
 
 toolkit = get_toolkit("search", config)
@@ -131,7 +133,7 @@ qa_result = await toolkit.call_tool("web_qa",
 
 **Features:**
 - Google search via Serper API
-- Web content extraction via Tarzi library
+- Web content extraction via Jina Reader API
 - Intelligent content filtering
 - LLM-powered Q&A on web content
 - Related link extraction
@@ -228,6 +230,7 @@ The system respects these environment variables:
 - `LOG_LEVEL`: Logging level
 - `COGENTS_ENABLE_TRACING`: Enable detailed tracing
 - `SERPER_API_KEY`: For search toolkit
+- `JINA_API_KEY`: For web content extraction
 
 ## LangChain Integration
 
