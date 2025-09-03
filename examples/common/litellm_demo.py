@@ -32,9 +32,9 @@ sys.path.insert(0, str(project_root))
 
 from pydantic import BaseModel, Field
 
-from cogents.common.llm.litellm import LLMClient
-from cogents.common.logging import get_logger, setup_logging
-from cogents.common.tracing import get_token_tracker
+from cogents.base.llm.litellm import LLMClient
+from cogents.base.logging import get_logger, setup_logging
+from cogents.base.tracing import get_token_tracker
 
 
 class PersonalityAnalysis(BaseModel):

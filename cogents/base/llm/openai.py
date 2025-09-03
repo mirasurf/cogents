@@ -19,9 +19,9 @@ from typing import Any, Dict, List, Optional, Type, TypeVar, Union
 from instructor import Instructor, Mode, patch
 from openai import OpenAI
 
-from cogents.common.llm.base import BaseLLMClient
-from cogents.common.logging import get_logger
-from cogents.common.tracing import (
+from cogents.base.llm.base import BaseLLMClient
+from cogents.base.logging import get_logger
+from cogents.base.tracing import (
     configure_opik,
     estimate_token_usage,
     extract_token_usage_from_openai_response,
@@ -384,7 +384,7 @@ class LLMClient(BaseLLMClient):
                         "model_name": self.embed_model,
                         "call_type": "embedding",
                     }
-                    from cogents.common.tracing import TokenUsage
+                    from cogents.base.tracing import TokenUsage
 
                     usage = TokenUsage(**usage_data)
                     get_token_tracker().record_usage(usage)
@@ -436,7 +436,7 @@ class LLMClient(BaseLLMClient):
                         "model_name": self.embed_model,
                         "call_type": "embedding",
                     }
-                    from cogents.common.tracing import TokenUsage
+                    from cogents.base.tracing import TokenUsage
 
                     usage = TokenUsage(**usage_data)
                     get_token_tracker().record_usage(usage)

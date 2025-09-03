@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
-from cogents.common.llm import get_llm_client
+from cogents.base.llm import get_llm_client
 
 
 class ToolkitConfig(BaseModel):

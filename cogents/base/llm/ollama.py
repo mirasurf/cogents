@@ -16,10 +16,10 @@ from typing import Any, Dict, List, Optional, Type, TypeVar, Union
 import ollama
 from instructor import Instructor, Mode, patch
 
-from cogents.common.consts import OLLAMA_EMBEDDING_MODEL, OLLAMA_GENERATIVE_MODEL
-from cogents.common.llm.base import BaseLLMClient
-from cogents.common.logging import get_logger
-from cogents.common.tracing import estimate_token_usage, get_token_tracker
+from cogents.base.consts import OLLAMA_EMBEDDING_MODEL, OLLAMA_GENERATIVE_MODEL
+from cogents.base.llm.base import BaseLLMClient
+from cogents.base.logging import get_logger
+from cogents.base.tracing import estimate_token_usage, get_token_tracker
 
 from .opik_tracing import configure_opik
 

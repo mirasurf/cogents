@@ -10,7 +10,7 @@ import os
 
 import pytest
 
-from cogents.common.llm import get_llm_client
+from cogents.base.llm import get_llm_client
 
 
 @pytest.mark.integration

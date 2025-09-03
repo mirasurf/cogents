@@ -6,8 +6,8 @@ from typing import List, Optional
 
 from langchain_core.messages import HumanMessage
 
-from cogents.common.llm import BaseLLMClient
-from cogents.common.logging import get_logger
+from cogents.base.llm import BaseLLMClient
+from cogents.base.logging import get_logger
 
 from .models import AskuraConfig, AskuraState, ConversationContext
 from .prompts import get_conversation_analysis_prompts, get_response_generation_prompts

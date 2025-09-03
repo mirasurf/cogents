@@ -6,10 +6,10 @@ from typing import Any, Dict, List, Optional, Type, TypeVar, Union
 from huggingface_hub import snapshot_download
 from llama_cpp import Llama
 
-from cogents.common.llm.base import BaseLLMClient
-from cogents.common.logging import get_logger
-from cogents.common.tracing import estimate_token_usage, get_token_tracker
-from cogents.common.tracing.opik_tracing import configure_opik
+from cogents.base.llm.base import BaseLLMClient
+from cogents.base.logging import get_logger
+from cogents.base.tracing import estimate_token_usage, get_token_tracker
+from cogents.base.tracing.opik_tracing import configure_opik
 
 # Only import OPIK if tracing is enabled
 OPIK_AVAILABLE = False

@@ -12,10 +12,10 @@ This module provides:
 import os
 from typing import Optional, TypeVar
 
-from cogents.common.consts import GEMINI_FLASH
-from cogents.common.llm.openai import LLMClient as OpenAILLMClient
-from cogents.common.logging import get_logger
-from cogents.common.tracing.opik_tracing import configure_opik
+from cogents.base.consts import GEMINI_FLASH
+from cogents.base.llm.openai import LLMClient as OpenAILLMClient
+from cogents.base.logging import get_logger
+from cogents.base.tracing.opik_tracing import configure_opik
 
 # Only import OPIK if tracing is enabled
 OPIK_AVAILABLE = False

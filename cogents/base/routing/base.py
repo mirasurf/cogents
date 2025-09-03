@@ -3,7 +3,7 @@
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
 
-from cogents.common.llm.base import BaseLLMClient
+from cogents.base.llm.base import BaseLLMClient
 
 from .types import ComplexityScore, ModelTier, RoutingResult
 

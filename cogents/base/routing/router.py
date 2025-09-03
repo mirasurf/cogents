@@ -2,9 +2,9 @@
 
 from typing import Any, Dict, Optional, Type, Union
 
-from cogents.common.llm import get_llm_client
-from cogents.common.llm.base import BaseLLMClient
-from cogents.common.logging import get_logger
+from cogents.base.llm import get_llm_client
+from cogents.base.llm.base import BaseLLMClient
+from cogents.base.logging import get_logger
 
 from .base import BaseRoutingStrategy
 from .strategies import DynamicComplexityStrategy, SelfAssessmentStrategy

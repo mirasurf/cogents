@@ -7,7 +7,7 @@ Tests cover ModelTier enum, ComplexityScore and RoutingResult Pydantic models.
 import pytest
 from pydantic import ValidationError
 
-from cogents.common.routing.types import ComplexityScore, ModelTier, RoutingResult
+from cogents.base.routing.types import ComplexityScore, ModelTier, RoutingResult
 
 
 class TestModelTier:

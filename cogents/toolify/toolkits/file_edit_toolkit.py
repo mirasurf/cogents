@@ -11,7 +11,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Callable, Dict, Optional
 
-from cogents.common.logging import get_logger
+from cogents.base.logging import get_logger
 
 from ..base import AsyncBaseToolkit
 from ..config import ToolkitConfig

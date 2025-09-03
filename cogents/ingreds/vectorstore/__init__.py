@@ -1,6 +1,6 @@
 import os
 
-from cogents.common.consts import DEFAULT_EMBEDDING_DIMS
+from cogents.base.consts import DEFAULT_EMBEDDING_DIMS
 
 # Optional imports - vector store providers might not be available
 try:

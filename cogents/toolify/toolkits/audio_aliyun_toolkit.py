@@ -15,7 +15,7 @@ from aliyunsdkcore.acs_exception.exceptions import ClientException, ServerExcept
 from aliyunsdkcore.client import AcsClient
 from aliyunsdkcore.request import CommonRequest
 
-from cogents.common.logging import get_logger
+from cogents.base.logging import get_logger
 
 from ..base import AsyncBaseToolkit
 from ..config import ToolkitConfig

@@ -5,8 +5,8 @@ from typing import Any, Dict, List, Optional
 from langchain_core.callbacks import BaseCallbackHandler
 from langchain_core.outputs import LLMResult
 
-from cogents.common.logging import color_text, get_logger
-from cogents.common.tracing.token_tracker import get_token_tracker
+from cogents.base.logging import color_text, get_logger
+from cogents.base.tracing.token_tracker import get_token_tracker
 
 logger = get_logger(__name__)
 

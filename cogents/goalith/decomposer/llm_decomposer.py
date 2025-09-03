@@ -9,8 +9,8 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
-from cogents.common.llm import get_llm_client_instructor
-from cogents.common.logging import get_logger
+from cogents.base.llm import get_llm_client_instructor
+from cogents.base.logging import get_logger
 from cogents.goalith.errors import DecompositionError
 from cogents.goalith.goalgraph.node import GoalNode
 

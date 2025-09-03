@@ -1,9 +1,9 @@
 """Self-assessment routing strategy implementation."""
 
 
-from cogents.common.logging import get_logger
-from cogents.common.routing.base import BaseRoutingStrategy
-from cogents.common.routing.types import ComplexityScore, ModelTier, RoutingResult
+from cogents.base.logging import get_logger
+from cogents.base.routing.base import BaseRoutingStrategy
+from cogents.base.routing.types import ComplexityScore, ModelTier, RoutingResult
 
 logger = get_logger(__name__)
 

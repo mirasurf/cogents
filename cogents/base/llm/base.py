@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Type, TypeVar, Union
 
-from cogents.common.consts import DEFAULT_EMBEDDING_DIMS
+from cogents.base.consts import DEFAULT_EMBEDDING_DIMS
 
 T = TypeVar("T")
 

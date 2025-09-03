@@ -9,8 +9,8 @@ from typing import Any, Dict, Optional
 
 from langchain_core.tools import tool
 
-from cogents.common.llm import get_llm_client_instructor
-from cogents.common.logging import get_logger
+from cogents.base.llm import get_llm_client_instructor
+from cogents.base.logging import get_logger
 
 from .models import TripPlanContext
 

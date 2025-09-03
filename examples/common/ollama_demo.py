@@ -39,9 +39,9 @@ sys.path.insert(0, str(project_root))
 
 from pydantic import BaseModel, Field
 
-from cogents.common.llm.ollama import LLMClient
-from cogents.common.logging import get_logger, setup_logging
-from cogents.common.tracing import get_token_tracker
+from cogents.base.llm.ollama import LLMClient
+from cogents.base.logging import get_logger, setup_logging
+from cogents.base.tracing import get_token_tracker
 
 
 class CodeAnalysis(BaseModel):

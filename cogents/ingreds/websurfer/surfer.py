@@ -8,7 +8,7 @@ from playwright.async_api import async_playwright
 from pydantic import BaseModel, Field, create_model
 
 from cogents.base.base_websurfer import BaseWebPage, BaseWebSurfer
-from cogents.common.typing_compat import override
+from cogents.base.typing_compat import override
 
 
 class WebSurferPage(BaseWebPage):

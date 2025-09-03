@@ -19,9 +19,9 @@ from typing import Any, Dict, List, Optional, Type, TypeVar, Union
 import litellm
 from instructor import Instructor, Mode, patch
 
-from cogents.common.llm.base import BaseLLMClient
-from cogents.common.logging import get_logger
-from cogents.common.tracing import configure_opik, estimate_token_usage, get_token_tracker, is_opik_enabled
+from cogents.base.llm.base import BaseLLMClient
+from cogents.base.logging import get_logger
+from cogents.base.tracing import configure_opik, estimate_token_usage, get_token_tracker, is_opik_enabled
 
 # Only import OPIK if tracing is enabled
 OPIK_AVAILABLE = False
@@ -167,7 +167,7 @@ class LLMClient(BaseLLMClient):
                             "model_name": self.chat_model,
                             "call_type": "completion",
                         }
-                        from cogents.common.tracing import TokenUsage
+                        from cogents.base.tracing import TokenUsage
 
                         usage = TokenUsage(**usage_data)
                         get_token_tracker().record_usage(usage)

@@ -11,7 +11,7 @@ import tempfile
 
 import pytest
 
-from cogents.common.llm.llamacpp import LLMClient
+from cogents.base.llm.llamacpp import LLMClient
 
 
 @pytest.mark.integration

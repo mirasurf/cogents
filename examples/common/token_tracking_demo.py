@@ -13,9 +13,9 @@ from pathlib import Path
 # Add cogents to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from cogents.common.llm import get_llm_client
-from cogents.common.logging import get_logger
-from cogents.common.tracing import TokenUsageCallback, get_token_tracker
+from cogents.base.llm import get_llm_client
+from cogents.base.logging import get_logger
+from cogents.base.tracing import TokenUsageCallback, get_token_tracker
 
 logger = get_logger(__name__)
 
@@ -96,7 +96,7 @@ def demo_callback_integration():
     callback.reset_session()
 
     # Simulate some custom client usage
-    from cogents.common.tracing import record_token_usage
+    from cogents.base.tracing import record_token_usage
 
     print("🔄 Simulating custom client calls...")
     record_token_usage(

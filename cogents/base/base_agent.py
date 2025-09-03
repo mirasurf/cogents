@@ -7,10 +7,10 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.graph import StateGraph
 from pydantic import BaseModel, Field
 
-from cogents.common.llm import get_llm_client_instructor
-from cogents.common.logging import get_logger
-from cogents.common.tracing import get_token_tracker
-from cogents.common.typing_compat import override
+from cogents.base.llm import get_llm_client_instructor
+from cogents.base.logging import get_logger
+from cogents.base.tracing import get_token_tracker
+from cogents.base.typing_compat import override
 
 
 class BaseAgent(ABC):

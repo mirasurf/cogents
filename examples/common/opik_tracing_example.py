@@ -43,10 +43,10 @@ sys.path.insert(0, str(project_root))
 
 from pydantic import BaseModel, Field
 
-from cogents.common.llm.litellm import LLMClient as LiteLLMClient
-from cogents.common.llm.ollama import LLMClient as OllamaClient
-from cogents.common.llm.openai import LLMClient as OpenAIClient
-from cogents.common.logging import get_logger, setup_logging
+from cogents.base.llm.litellm import LLMClient as LiteLLMClient
+from cogents.base.llm.ollama import LLMClient as OllamaClient
+from cogents.base.llm.openai import LLMClient as OpenAIClient
+from cogents.base.logging import get_logger, setup_logging
 
 from .opik_tracing import configure_opik, get_opik_project, is_opik_enabled
 

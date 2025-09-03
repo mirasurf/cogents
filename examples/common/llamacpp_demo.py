@@ -22,9 +22,9 @@ from typing import Optional
 # Add cogents to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from cogents.common.llm.llamacpp import LLMClient
-from cogents.common.logging import get_logger, setup_logging
-from cogents.common.tracing import get_token_tracker
+from cogents.base.llm.llamacpp import LLMClient
+from cogents.base.logging import get_logger, setup_logging
+from cogents.base.tracing import get_token_tracker
 
 logger = get_logger(__name__)
 
