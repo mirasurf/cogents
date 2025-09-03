@@ -4,13 +4,13 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "cogents"
-version = "0.0.17"
+version = "0.0.18"
 description = "Towards a cognitive agentic framework"
 readme = "README.md"
 license = "MIT"
-authors = ["xming <chenxm35@gmail.com>"]
-maintainers = ["xming <chenxm35@gmail.com>"]
-keywords = ["agentic", "multi-agent", "framework", "cognition", "artificial intelligence"]
+authors = ["Xiaming Chen <chenxm35@gmail.com>"]
+maintainers = ["Xiaming Chen <chenxm35@gmail.com>"]
+keywords = ["agents", "multi-agent system", "cognition", "artificial intelligence"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -34,6 +34,7 @@ typing-extensions = "^4.8.0"
 deprecated = "^1.2.18"
 httpx = "^0.28.1"
 aiohttp = "^3.9.0"
+anyio = "^4.10.0"
 # LLM and AI dependencies
 openai = "^1.0.0"
 instructor = "^1.10.0"
@@ -47,7 +48,7 @@ langgraph = "^0.5.4"
 # LLM providers
 litellm = "^1.0.0"
 ollama = "^0.5.3"
-# Local LLM support
+huggingface-hub = "^0.34.4"
 llama-cpp-python = "^0.3.16"
 # Orchestration
 networkx = "^3.5"
@@ -58,16 +59,19 @@ cdp-use = "^1.4.0"
 bubus = "^1.5.6"
 psutil = "^7.0.0"
 
-[tool.poetry.group.toolkit.dependencies]
+[tool.poetry.group.tools.dependencies]
 # Vector database
 weaviate-client = "^4.9.0"
 # Web search
 tavily-python = "^0.3.0"
+# Voice processing
+aliyun-python-sdk-core = "^2.13.1,<3.0.0"
 # Tools dependencies
 matplotlib = "^3.8.0"
 pexpect = "^4.9.0"
 ipython = "^8.18.0"
 psycopg2 = "^2.9.10"
+psycopg2-binary = "^2.9.0"
 arxiv = "^2.2.0"
 opik = "^0.2.0"
 pillow = "^10.0.0"
@@ -76,8 +80,6 @@ pandas = "^2.0.0"
 pymupdf = "^1.23.0"
 openpyxl = "^3.1.5"
 twisted = "^25.5.0"
-# Voice processing
-aliyun-python-sdk-core = "^2.13.1,<3.0.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=8.2,<9"
@@ -88,15 +90,9 @@ pytest-trio = "^0.8.0"
 pytest-twisted = "^1.14.3"
 black = "^23.0.0"
 isort = "^5.12.0"
-mypy = "^1.0.0"
-pre-commit = "^3.0.0"
-build = "^1.2.0"
 flake8 = "^7.3.0"
-psycopg2-binary = "^2.9.0"
 autoflake = "^2.3.1"
 pygraphviz = "^1.14"
-huggingface-hub = "^0.34.4"
-anyio = "^4.10.0"
 
 [tool.poetry.urls]
 Homepage = "https://github.com/caesar0301/cogents"
@@ -105,29 +101,10 @@ Repository = "https://github.com/caesar0301/cogents"
 
 [tool.black]
 line-length = 120
-target-version = ['py311']
 
 [tool.isort]
 profile = "black"
 line_length = 120
-
-[tool.mypy]
-python_version = "3.11"
-disallow_untyped_defs = true
-disallow_incomplete_defs = true
-disallow_untyped_decorators = true
-no_implicit_optional = true
-warn_redundant_casts = true
-warn_unused_ignores = true
-warn_no_return = true
-warn_unreachable = true
-strict_equality = true
-
-[[tool.mypy.overrides]]
-module = [
-    "pytest.*",
-]
-ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

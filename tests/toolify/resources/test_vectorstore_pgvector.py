@@ -2,7 +2,7 @@ import uuid
 
 import pytest
 
-from cogents.toolify.resources.vectorstore.pgvector import PGVectorStore
+from cogents.ingreds.vectorstore.pgvector import PGVectorStore
 
 
 @pytest.mark.integration

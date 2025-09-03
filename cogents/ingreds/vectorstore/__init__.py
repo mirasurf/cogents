@@ -2,9 +2,6 @@ import os
 
 from cogents.common.consts import DEFAULT_EMBEDDING_DIMS
 
-from .base import BaseVectorStore
-from .models import OutputData
-
 # Optional imports - vector store providers might not be available
 try:
     from .weaviate import WeaviateVectorStore
@@ -23,10 +20,8 @@ except ImportError:
     PGVECTOR_AVAILABLE = False
 
 __all__ = [
-    "BaseVectorStore",
     "WeaviateVectorStore",
     "PGVectorStore",
-    "OutputData",
     "get_vector_store",
 ]
 

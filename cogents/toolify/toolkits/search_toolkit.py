@@ -11,8 +11,8 @@ from typing import Callable, Dict, Optional
 
 import aiohttp
 
+from cogents.base.base_search import SearchResult
 from cogents.common.logging import get_logger
-from cogents.toolify.resources.websearch.types import SearchResult
 
 from ..base import AsyncBaseToolkit
 from ..config import ToolkitConfig
@@ -337,7 +337,7 @@ Please list any URLs, links, or references mentioned in the content that could p
         self.logger.info(f"Performing Tavily search for query: {query}")
 
         try:
-            from cogents.toolify.resources.websearch import TavilySearchWrapper
+            from cogents.ingreds.websearch import TavilySearchWrapper
 
             # Initialize Tavily Search client with configuration
             config_kwargs = {
@@ -414,7 +414,7 @@ Please list any URLs, links, or references mentioned in the content that could p
         self.logger.info(f"Performing Google AI search for query: {query}")
 
         try:
-            from cogents.toolify.resources.websearch import GoogleAISearch
+            from cogents.ingreds.websearch import GoogleAISearch
 
             # Initialize Google AI Search client
             google = GoogleAISearch()

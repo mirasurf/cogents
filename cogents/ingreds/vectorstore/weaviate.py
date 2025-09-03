@@ -21,8 +21,7 @@ from weaviate.classes.init import Auth
 from weaviate.classes.query import Filter, MetadataQuery
 from weaviate.util import get_valid_uuid
 
-from .base import BaseVectorStore
-from .models import OutputData
+from cogents.base.base_vectorstore import BaseVectorStore, OutputData
 
 logger = logging.getLogger(__name__)
 

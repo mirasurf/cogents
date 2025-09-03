@@ -27,17 +27,13 @@ help: ## Show this help message
 # SETUP COMMANDS
 # =============================================================================
 
-.PHONY: install install-dev setup check-env
+.PHONY: install setup check-env
 
-install: ## Install dependencies
-	@echo "$(BLUE)📦 Installing dependencies...$(RESET)"
-	@$(POETRY) install
-
-install-dev: ## Install development dependencies
+install: ## Install development dependencies
 	@echo "$(BLUE)🔧 Installing development dependencies...$(RESET)"
-	@$(POETRY) install --with dev
+	@$(POETRY) install --with dev,tools
 
-setup: install-dev ## Setup development environment
+setup: install ## Setup development environment
 	@echo "$(GREEN)✅ Development environment ready$(RESET)"
 
 check-env: ## Check environment setup

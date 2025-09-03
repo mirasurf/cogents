@@ -1,16 +1,16 @@
 import os
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional, Type
+from datetime import datetime
+from typing import Any, Dict, List, Optional, Type
 
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import StateGraph
+from pydantic import BaseModel, Field
 
 from cogents.common.llm import get_llm_client_instructor
 from cogents.common.logging import get_logger
 from cogents.common.tracing import get_token_tracker
 from cogents.common.typing_compat import override
-
-from .models import ResearchOutput
 
 
 class BaseAgent(ABC):
@@ -182,6 +182,15 @@ class BaseConversationAgent(BaseGraphicAgent):
         # Create a temporary user ID for standalone run
         response = self.start_conversation("standalone_user", user_message)
         return response.message
+
+
+class ResearchOutput(BaseModel):
+    """Output from research process."""
+
+    content: str = Field(default="")
+    sources: List[Dict[str, Any]] = Field(default_factory=list)
+    summary: str = Field(default="")
+    timestamp: datetime = Field(default_factory=datetime.now)
 
 
 class BaseResearcher(BaseGraphicAgent):

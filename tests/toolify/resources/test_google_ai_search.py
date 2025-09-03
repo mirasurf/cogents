@@ -6,8 +6,8 @@ import os
 
 import pytest
 
-from cogents.toolify.resources.websearch.google_ai_search import GoogleAISearch
-from cogents.toolify.resources.websearch.types import SearchResult, SourceItem
+from cogents.base.base_search import SearchResult, SourceItem
+from cogents.ingreds.websearch.google_ai_search import GoogleAISearch
 
 
 @pytest.mark.integration

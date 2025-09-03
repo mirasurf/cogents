@@ -1,14 +1,17 @@
 # webhand/page.py
 import asyncio
-from typing import Any, Dict, List, Literal, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 from playwright.async_api import Browser as PlaywrightBrowser
 from playwright.async_api import Page as PlaywrightPage
 from playwright.async_api import async_playwright
 from pydantic import BaseModel, Field, create_model
 
+from cogents.base.base_websurfer import BaseWebPage, BaseWebSurfer
+from cogents.common.typing_compat import override
 
-class WebhandPage:
+
+class WebSurferPage(BaseWebPage):
     """
     Represents a single page in a browser, providing powerful web automation capabilities.
     Inspired by Stagehand's Act, Extract, Observe, and Agent primitives.
@@ -17,10 +20,12 @@ class WebhandPage:
     def __init__(self, playwright_page: PlaywrightPage):
         self._page = playwright_page
 
+    @override
     async def goto(self, url: str, **kwargs) -> None:
         """Navigates to the specified URL."""
         await self._page.goto(url, **kwargs)
 
+    @override
     async def act(self, action_description: str, **kwargs) -> Any:
         """
         Executes an action on the page using natural language.
@@ -49,6 +54,7 @@ class WebhandPage:
             except Exception as e:
                 return {"status": "failure", "error": str(e), "action": "generic click attempt failed"}
 
+    @override
     async def extract(
         self, schema: Union[Dict, BaseModel], selector: Optional[str] = None, **kwargs
     ) -> Union[Dict, BaseModel]:
@@ -103,6 +109,7 @@ class WebhandPage:
         else:
             raise TypeError("Schema must be a dictionary or a Pydantic BaseModel.")
 
+    @override
     async def observe(self, query: str = "find clickable elements", **kwargs) -> List[Dict[str, Any]]:
         """
         Discovers available actions or elements on the page based on a natural language query.
@@ -119,7 +126,7 @@ class WebhandPage:
                 )
                 if text and text.strip():
                     results.append(
-                        {"type": "clickable", "text": text.strip(), "selector": f"__webhand_gen_selector_{i}"}
+                        {"type": "clickable", "text": text.strip(), "selector": f"__websurfer_gen_selector_{i}"}
                     )
         elif "form fields" in query.lower():
             elements = await self._page.query_selector_all("input:not([type='hidden']), textarea, select")
@@ -129,7 +136,7 @@ class WebhandPage:
                 )
                 if label and label.strip():
                     results.append(
-                        {"type": "form_field", "label": label.strip(), "selector": f"__webhand_gen_selector_{i}"}
+                        {"type": "form_field", "label": label.strip(), "selector": f"__websurfer_gen_selector_{i}"}
                     )
         else:
             print(f"Webhand: Generic observation for '{query}'. Returning all visible text elements.")
@@ -138,11 +145,16 @@ class WebhandPage:
                 text = await el.text_content()
                 if text and text.strip():
                     results.append(
-                        {"type": "text_element", "text": text.strip()[:100], "selector": f"__webhand_gen_selector_{i}"}
+                        {
+                            "type": "text_element",
+                            "text": text.strip()[:100],
+                            "selector": f"__websurfer_gen_selector_{i}",
+                        }
                     )  # Truncate for brevity
 
         return results
 
+    @override
     async def agent(
         self, prompt: str, provider: str = "openai", model: str = "gpt-4", options: Optional[Dict] = None, **kwargs
     ) -> Dict[str, Any]:
@@ -196,7 +208,7 @@ class WebhandPage:
             }
 
 
-class Webhand:
+class WebSurfer(BaseWebSurfer):
     """
     The main entry point for Webhand, providing methods to launch browsers.
     """
@@ -205,11 +217,10 @@ class Webhand:
         self._playwright_instance = None
         self._browser = None
 
-    async def launch(
-        self, headless: bool = True, browser_type: Literal["chromium", "firefox", "webkit"] = "chromium", **kwargs
-    ) -> WebhandPage:
+    @override
+    async def launch(self, headless: bool = True, browser_type: str = "chromium", **kwargs) -> BaseWebPage:
         """
-        Launches a new browser instance and returns a WebhandPage.
+        Launches a new browser instance and returns a WebSurferPage.
         """
         if self._playwright_instance is None:
             self._playwright_instance = await async_playwright().start()
@@ -226,8 +237,9 @@ class Webhand:
             raise ValueError(f"Unsupported browser type: {browser_type}")
 
         page = await self._browser.new_page()
-        return WebhandPage(page)
+        return BaseWebPage(page)
 
+    @override
     async def close(self):
         """Closes the browser instance and Playwright."""
         if self._browser:
@@ -238,9 +250,9 @@ class Webhand:
 
 # Example Usage
 async def main():
-    webhand = Webhand()
+    websurfer = WebSurfer()
     try:
-        page = await webhand.launch(headless=False)  # Set to True for background execution
+        page = await websurfer.launch(headless=False)  # Set to True for background execution
         await page.goto("https://www.example.com")
         print(f"Current URL: {page._page.url}")
 
@@ -294,7 +306,7 @@ async def main():
     except Exception as e:
         print(f"An error occurred: {e}")
     finally:
-        await webhand.close()
+        await websurfer.close()
 
 
 if __name__ == "__main__":

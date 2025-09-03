@@ -8,7 +8,15 @@ Licensed under the Apache License, Version 2.0
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
 
-from .models import OutputData
+from pydantic import BaseModel
+
+
+class OutputData(BaseModel):
+    """Standard output data structure for vector store operations."""
+
+    id: str
+    score: Optional[float] = None
+    payload: Dict[str, Any]
 
 
 class BaseVectorStore(ABC):

@@ -10,7 +10,7 @@ import pytest
 
 # Import common test fixtures from existing modules
 try:
-    from tests.unit.goalith.conftest import (
+    from tests.goalith.conftest import (
         decomposer_registry,
         empty_graph_store,
         memory_store,

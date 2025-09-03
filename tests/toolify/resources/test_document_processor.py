@@ -10,8 +10,8 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from cogents.toolify.resources.semsearch.document_processor import ChunkingConfig, DocumentProcessor, ProcessedDocument
-from cogents.toolify.resources.semsearch.weaviate_client import DocumentChunk
+from cogents.ingreds.semsearch.document_processor import ChunkingConfig, DocumentProcessor, ProcessedDocument
+from cogents.ingreds.semsearch.weaviate_client import DocumentChunk
 
 
 @pytest.fixture
