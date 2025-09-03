@@ -35,6 +35,8 @@ deprecated = "^1.2.18"
 httpx = "^0.28.1"
 aiohttp = "^3.9.0"
 anyio = "^4.10.0"
+bubus = "^1.5.6"
+psutil = "^7.0.0"
 # LLM and AI dependencies
 openai = "^1.0.0"
 instructor = "^1.10.0"
@@ -54,10 +56,6 @@ llama-cpp-python = "^0.3.16"
 networkx = "^3.5"
 # MCP support
 mcp = "^1.0.0"
-twisted = "^25.5.0"
-cdp-use = "^1.4.0"
-bubus = "^1.5.6"
-psutil = "^7.0.0"
 
 [tool.poetry.group.tools.dependencies]
 # Vector database
@@ -79,7 +77,7 @@ wikipedia-api = "^0.6.0"
 pandas = "^2.0.0"
 pymupdf = "^1.23.0"
 openpyxl = "^3.1.5"
-twisted = "^25.5.0"
+cdp-use = "^1.4.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=8.2,<9"
