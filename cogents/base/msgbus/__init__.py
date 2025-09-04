@@ -2,7 +2,7 @@
 
 from bubus import BaseEvent, EventBus
 
-from .base_watchdog import BaseWatchdog, EventProcessor
+from .base import BaseWatchdog, EventProcessor
 
 __all__ = [
     "BaseEvent",

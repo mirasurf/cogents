@@ -1,22 +1,24 @@
-"""Base watchdog class for general event monitoring components."""
+"""Base watchdog class for general event monitoring components.
+ 
+This is a generic watchdog class that can be used with any event processor that 
+implements the EventProcessor protocol. Derived from browser-use BaseWatchdog.
+"""
 
 import time
 from collections.abc import Iterable
 from typing import Any, ClassVar, Generic, Protocol, TypeVar
 
 from bubus import BaseEvent, EventBus
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-# Generic type for the event processor (replaces BrowserSession)
+from cogents.base.logging import color_text
+
+# Generic type for the event processor
 TEventProcessor = TypeVar("TEventProcessor", bound="EventProcessor")
 
 
 class EventProcessor(Protocol):
-    """Protocol defining the interface for event processors.
-
-    This replaces the BrowserSession dependency with a generic interface
-    that any event processor must implement.
-    """
+    """Protocol defining the interface for event processors."""
 
     @property
     def event_bus(self) -> EventBus:
@@ -38,7 +40,7 @@ class BaseWatchdog(BaseModel, Generic[TEventProcessor]):
     Handler methods should be named: on_EventTypeName(self, event: EventTypeName)
 
     Generic type TEventProcessor allows you to specify the type of event processor
-    this watchdog works with (e.g., BrowserSession, DatabaseSession, etc.)
+    this watchdog works with (e.g., DatabaseSession, etc.)
     """
 
     model_config = ConfigDict(
@@ -48,14 +50,46 @@ class BaseWatchdog(BaseModel, Generic[TEventProcessor]):
         revalidate_instances="never",  # avoid re-triggering __init__ / validators and erasing private attrs
     )
 
+    # Core dependencies
+    event_bus: EventBus = Field()
+    event_processor: Any = Field()  # Use Any to avoid Pydantic validation issues with generic types
+
+    @model_validator(mode="after")
+    def validate_event_bus_consistency(self) -> "BaseWatchdog":
+        """Validate that event_processor has the same event_bus instance as the watchdog.
+
+        This prevents the architectural issue where events are dispatched to one bus
+        but handlers listen on a different bus, causing infinite hangs.
+        """
+        if not hasattr(self.event_processor, "event_bus"):
+            raise ValueError(
+                f"EventProcessor {type(self.event_processor).__name__} must have an 'event_bus' attribute. "
+                f"Ensure your event processor implements the EventProcessor protocol correctly."
+            )
+
+        if not hasattr(self.event_processor, "logger"):
+            raise ValueError(
+                f"EventProcessor {type(self.event_processor).__name__} must have an 'logger' attribute. "
+                f"Ensure your event processor implements the EventProcessor protocol correctly."
+            )
+
+        processor_bus = self.event_processor.event_bus
+        watchdog_bus = self.event_bus
+
+        if processor_bus is not watchdog_bus:
+            raise ValueError(
+                f"EventProcessor.event_bus and BaseWatchdog.event_bus must be the same instance! "
+                f"Found different instances: {type(processor_bus)} vs {type(watchdog_bus)}. "
+                f"This causes events to be dispatched to one bus while handlers listen on another, "
+                f"resulting in infinite hangs. Ensure both use the same EventBus instance."
+            )
+
+        return self
+
     # Class variables to statically define the list of events relevant to each watchdog
     # (not enforced, just to make it easier to understand the code and debug watchdogs at runtime)
     LISTENS_TO: ClassVar[list[type[BaseEvent[Any]]]] = []  # Events this watchdog listens to
     EMITS: ClassVar[list[type[BaseEvent[Any]]]] = []  # Events this watchdog emits
-
-    # Core dependencies
-    event_bus: EventBus = Field()
-    event_processor: Any = Field()  # Use Any to avoid Pydantic validation issues with generic types
 
     # Shared state that other watchdogs might need to access should not be defined on EventProcessor, not here!
     # Shared helper methods needed by other watchdogs should be defined on EventProcessor, not here!
@@ -96,44 +130,41 @@ class BaseWatchdog(BaseModel, Generic[TEventProcessor]):
         watchdog_instance = getattr(handler, "__self__", None)
         watchdog_class_name = watchdog_instance.__class__.__name__ if watchdog_instance else "Unknown"
 
-        # Color codes for logging
-        red = "\033[91m"
-        green = "\033[92m"
-        yellow = "\033[93m"
-        magenta = "\033[95m"
-        cyan = "\033[96m"
-        reset = "\033[0m"
-
         # Create a wrapper function with unique name to avoid duplicate handler warnings
         # Capture handler by value to avoid closure issues
         def make_unique_handler(actual_handler):
             async def unique_handler(event):
-                # just for debug logging, not used for anything else
-                parent_event = event_bus.event_history.get(event.event_parent_id) if event.event_parent_id else None
-                grandparent_event = (
-                    event_bus.event_history.get(parent_event.event_parent_id)
-                    if parent_event and parent_event.event_parent_id
-                    else None
-                )
-                parent = (
-                    f"{yellow}↲  triggered by {cyan}on_{parent_event.event_type}#{parent_event.event_id[-4:]}{reset}"
-                    if parent_event
-                    else f"{magenta}👈 by EventProcessor{reset}"
-                )
-                grandparent = (
-                    (
-                        f"{yellow}↲  under {cyan}{grandparent_event.event_type}#{grandparent_event.event_id[-4:]}{reset}"
-                        if grandparent_event
-                        else f"{magenta}👈 by EventProcessor{reset}"
+                # Safe event history access - avoid hanging during registration
+                try:
+                    parent_event = event_bus.event_history.get(event.event_parent_id) if event.event_parent_id else None
+                    grandparent_event = (
+                        event_bus.event_history.get(parent_event.event_parent_id)
+                        if parent_event and parent_event.event_parent_id
+                        else None
                     )
-                    if parent_event
-                    else ""
-                )
-                event_str = f"#{event.event_id[-4:]}"
+                    if parent_event:
+                        parent_info = f"{color_text('↲  triggered by', 'yellow')} {color_text(f'on_{parent_event.event_type}#{parent_event.event_id[-4:]}', 'cyan')}"
+                        return_info = f"⤴  {color_text('returned to', 'green')} {color_text(f'on_{parent_event.event_type}#{parent_event.event_id[-4:]}', 'cyan')}"
+                    else:
+                        parent_info = color_text("👈 by EventProcessor", "magenta")
+                        return_info = (
+                            f"👉 {color_text('returned to', 'green')} {color_text('EventProcessor', 'magenta')}"
+                        )
+
+                    grandparent_info = ""
+                    if parent_event and grandparent_event:
+                        grandparent_info = f" {color_text('↲  under', 'yellow')} {color_text(f'{grandparent_event.event_type}#{grandparent_event.event_id[-4:]}', 'cyan')}"
+                except Exception:
+                    # Fallback logging if event history access fails
+                    parent_info = color_text("👈 by EventProcessor", "magenta")
+                    return_info = f"👉 {color_text('returned to', 'green')} {color_text('EventProcessor', 'magenta')}"
+                    grandparent_info = ""
+
+                event_str = f"#{event.event_id[-4:]}" if hasattr(event, "event_id") and event.event_id else ""
                 time_start = time.time()
                 watchdog_and_handler_str = f"[{watchdog_class_name}.{actual_handler.__name__}({event_str})]".ljust(54)
                 event_processor.logger.debug(
-                    f"{cyan}🚌 {watchdog_and_handler_str} ⏳ Starting...      {reset} {parent} {grandparent}"
+                    f"{color_text('🚌', 'cyan')} {watchdog_and_handler_str} ⏳ Starting...       {parent_info}{grandparent_info}"
                 )
 
                 try:
@@ -146,19 +177,18 @@ class BaseWatchdog(BaseModel, Generic[TEventProcessor]):
                     # just for debug logging, not used for anything else
                     time_end = time.time()
                     time_elapsed = time_end - time_start
-                    result_summary = "" if result is None else f" ➡️ {magenta}<{type(result).__name__}>{reset}"
-                    parents_summary = f" {parent}".replace(
-                        "↲  triggered by ", f"⤴  {green}returned to  {cyan}"
-                    ).replace("👈 by EventProcessor", f"👉 {green}returned to  {magenta}EventProcessor{reset}")
+                    result_summary = (
+                        "" if result is None else f" ➡️ {color_text(f'<{type(result).__name__}>', 'magenta')}"
+                    )
                     event_processor.logger.debug(
-                        f"{green}🚌 {watchdog_and_handler_str} ✅ Succeeded ({time_elapsed:.2f}s){reset}{result_summary}{parents_summary}"
+                        f"{color_text('🚌', 'green')} {watchdog_and_handler_str} ✅ Succeeded ({time_elapsed:.2f}s){result_summary} {return_info}"
                     )
                     return result
                 except Exception as e:
                     time_end = time.time()
                     time_elapsed = time_end - time_start
                     event_processor.logger.error(
-                        f"{red}🚌 {watchdog_and_handler_str} ❌ Failed ({time_elapsed:.2f}s): {type(e).__name__}: {e}{reset}"
+                        f"{color_text('🚌', 'red')} {watchdog_and_handler_str} ❌ Failed ({time_elapsed:.2f}s): {type(e).__name__}: {e}"
                     )
 
                     # Attempt to handle errors - subclasses can override this method
@@ -166,7 +196,7 @@ class BaseWatchdog(BaseModel, Generic[TEventProcessor]):
                         await watchdog_instance._handle_handler_error(e, event, actual_handler)
                     except Exception as sub_error:
                         event_processor.logger.error(
-                            f"{red}🚌 {watchdog_and_handler_str} ❌ Error handling failed: {type(sub_error).__name__}: {sub_error}{reset}"
+                            f"{color_text('🚌', 'red')} {watchdog_and_handler_str} ❌ Error handling failed: {type(sub_error).__name__}: {sub_error}"
                         )
                         raise
 
@@ -211,43 +241,104 @@ class BaseWatchdog(BaseModel, Generic[TEventProcessor]):
         # Register event handlers automatically based on method names
         assert self.event_processor is not None, "Event processor not initialized"
 
-        # Find all handler methods (on_EventName)
+        # Create efficient event class lookup
+        event_class_map = {}
+
+        # Primary strategy: Use LISTENS_TO for efficient event class discovery
+        if self.LISTENS_TO:
+            event_class_map = {event_class.__name__: event_class for event_class in self.LISTENS_TO}
+            self.logger.debug(
+                f"[{self.__class__.__name__}] Using LISTENS_TO for event discovery: {list(event_class_map.keys())}"
+            )
+        else:
+            # Safe fallback strategy: Try to discover event classes from event bus event registry
+            # This is more reliable than trying to extract from handler annotations during registration
+            try:
+                # Check if the event bus has an event registry or similar mechanism
+                if hasattr(self.event_bus, "_event_types"):
+                    event_class_map = {cls.__name__: cls for cls in self.event_bus._event_types}
+                elif hasattr(self.event_bus, "event_registry"):
+                    event_class_map = {name: cls for name, cls in self.event_bus.event_registry.items()}
+                else:
+                    # Last resort: try to extract from existing handlers (but do it safely)
+                    for event_name, handlers in self.event_bus.handlers.items():
+                        if handlers and hasattr(handlers[0], "__annotations__"):
+                            # Get the event class from handler's first parameter annotation
+                            annotations = handlers[0].__annotations__
+                            if "event" in annotations:
+                                event_class = annotations["event"]
+                                if isinstance(event_class, type) and issubclass(event_class, BaseEvent):
+                                    event_class_map[event_name] = event_class
+
+                if event_class_map:
+                    self.logger.debug(
+                        f"[{self.__class__.__name__}] Discovered event classes: {list(event_class_map.keys())}"
+                    )
+                else:
+                    self.logger.warning(
+                        f"[{self.__class__.__name__}] No event classes discovered. Define LISTENS_TO for better performance."
+                    )
+            except Exception as e:
+                self.logger.warning(f"[{self.__class__.__name__}] Failed to discover event classes: {e}")
+
+        # Find all handler methods (on_EventName) and register them efficiently
         registered_events = set()
+        handler_methods = []
+
+        # Collect handler methods first
         for method_name in dir(self):
             if method_name.startswith("on_") and callable(getattr(self, method_name)):
-                # Extract event name from method name (on_EventName -> EventName)
-                event_name = method_name[3:]  # Remove 'on_' prefix
+                handler_methods.append(method_name)
 
-                # Try to find the event class in the event bus handlers
-                event_class = None
-                for registered_event_name, handlers in self.event_bus.handlers.items():
-                    if registered_event_name == event_name and handlers:
-                        # Get the event class from the first handler
-                        event_class = type(handlers[0].__annotations__.get("event", BaseEvent))
+        # Process each handler method
+        for method_name in handler_methods:
+            # Extract event name from method name (on_EventName -> EventName)
+            event_name = method_name[3:]  # Remove 'on_' prefix
 
-                if event_class and issubclass(event_class, BaseEvent):
-                    # ASSERTION: If LISTENS_TO is defined, enforce it
-                    if self.LISTENS_TO:
-                        assert event_class in self.LISTENS_TO, (
-                            f"[{self.__class__.__name__}] Handler {method_name} listens to {event_name} "
-                            f"but {event_name} is not declared in LISTENS_TO: {[e.__name__ for e in self.LISTENS_TO]}"
-                        )
+            # Look up event class efficiently
+            event_class = event_class_map.get(event_name)
 
-                    handler = getattr(self, method_name)
+            if event_class:
+                # ASSERTION: If LISTENS_TO is defined, enforce it
+                if self.LISTENS_TO:
+                    assert event_class in self.LISTENS_TO, (
+                        f"[{self.__class__.__name__}] Handler {method_name} listens to {event_name} "
+                        f"but {event_name} is not declared in LISTENS_TO: {[e.__name__ for e in self.LISTENS_TO]}"
+                    )
 
-                    # Use the static helper to attach the handler
-                    self.attach_handler_to_processor(self.event_processor, event_class, handler)
-                    registered_events.add(event_class)
+                handler = getattr(self, method_name)
+
+                # Use the static helper to attach the handler
+                self.attach_handler_to_processor(self.event_processor, event_class, handler)
+                registered_events.add(event_class)
+
+                self.logger.debug(f"[{self.__class__.__name__}] Registered handler {method_name} for {event_name}")
+            else:
+                # Better error message for missing event classes
+                if self.LISTENS_TO:
+                    available_events = [e.__name__ for e in self.LISTENS_TO]
+                    self.logger.warning(
+                        f"[{self.__class__.__name__}] Handler {method_name} references unknown event '{event_name}'. "
+                        f"Available events in LISTENS_TO: {available_events}"
+                    )
+                else:
+                    self.logger.warning(
+                        f"[{self.__class__.__name__}] Handler {method_name} references unknown event '{event_name}'. "
+                        f"Consider defining LISTENS_TO class variable for better event discovery."
+                    )
 
         # ASSERTION: If LISTENS_TO is defined, ensure all declared events have handlers
         if self.LISTENS_TO:
             missing_handlers = set(self.LISTENS_TO) - registered_events
             if missing_handlers:
                 missing_names = [e.__name__ for e in missing_handlers]
+                missing_method_names = [f"on_{name}" for name in missing_names]
                 self.logger.warning(
                     f"[{self.__class__.__name__}] LISTENS_TO declares {missing_names} "
-                    f'but no handlers found (missing on_{"_, on_".join(missing_names)} methods)'
+                    f'but no handlers found (missing {", ".join(missing_method_names)} methods)'
                 )
+
+        self.logger.info(f"[{self.__class__.__name__}] Successfully registered {len(registered_events)} event handlers")
 
     def emit_event(self, event: BaseEvent[Any]) -> None:
         """Emit an event to the event bus.

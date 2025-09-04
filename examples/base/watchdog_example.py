@@ -3,11 +3,10 @@
 import asyncio
 import logging
 
-from bubus import BaseEvent, EventBus
 from bubus.models import T_EventResultType
 from pydantic import Field
 
-from cogents.base.buspark import BaseWatchdog
+from cogents.base.msgbus import BaseEvent, BaseWatchdog, EventBus
 
 
 # Example event classes
@@ -37,9 +36,9 @@ class SecurityAlertEvent(BaseEvent[T_EventResultType]):
 class DatabaseSession:
     """Example event processor that manages database operations."""
 
-    def __init__(self, name: str):
+    def __init__(self, name: str, event_bus: EventBus):
         self.name = name
-        self.event_bus = EventBus()
+        self.event_bus = event_bus  # Use the provided event_bus, don't create our own!
         self.logger = logging.getLogger(f"DatabaseSession.{name}")
         self.active_users = set()
 
@@ -105,8 +104,8 @@ class UserActivityWatchdog(BaseWatchdog[DatabaseSession]):
 class EventLoggerWatchdog(BaseWatchdog[DatabaseSession]):
     """Watchdog that logs all events for debugging purposes."""
 
-    # Listen to all events (empty list means listen to everything)
-    LISTENS_TO = []
+    # Declare which events this watchdog listens to
+    LISTENS_TO = [UserLoginEvent, UserLogoutEvent, SecurityAlertEvent]
 
     # Don't emit any events
     EMITS = []
@@ -136,8 +135,8 @@ async def main():
         # Create event bus
         event_bus = EventBus()
 
-        # Create database session
-        db_session = DatabaseSession("main_db")
+        # Create database session with shared event bus
+        db_session = DatabaseSession("main_db", event_bus)
 
         # Create watchdogs
         user_watchdog = UserActivityWatchdog(event_bus=event_bus, event_processor=db_session)
@@ -167,60 +166,47 @@ async def main():
 
         print("✅ User activity simulation completed!")
 
-        # Wait for all events to be processed
-        print("⏳ Waiting for all events to complete...")
-        await event_bus.wait_until_idle(timeout=10.0)
-        print("✅ All events completed!")
+        # Graceful shutdown sequence to avoid task exception warnings
+        print("⏳ Brief wait for events to settle...")
+        await asyncio.sleep(0.5)  # Give events time to complete
 
-        # Try to stop the event bus gracefully
         print("🛑 Stopping event bus...")
+
+        # First, try graceful stop with short timeout
         try:
-            # Use a reasonable timeout for graceful shutdown
-            await asyncio.wait_for(event_bus.stop(timeout=5.0, clear=True), timeout=10.0)
+            await asyncio.wait_for(event_bus.stop(timeout=1.0, clear=True), timeout=2.0)
             print("✅ Event bus stopped gracefully!")
         except asyncio.TimeoutError:
-            print("⚠️  Event bus stop timed out, forcing shutdown...")
-            # Force shutdown by setting internal flags
+            print("⚠️  Graceful stop timed out, cleaning up tasks...")
+
+            # Cancel any remaining event bus related tasks
+            current_task = asyncio.current_task()
+            remaining_tasks = [task for task in asyncio.all_tasks() if not task.done() and task != current_task]
+
+            if remaining_tasks:
+                print(f"⏳ Cancelling {len(remaining_tasks)} remaining tasks...")
+                for task in remaining_tasks:
+                    task.cancel()
+
+                # Wait briefly for cancellation
+                try:
+                    await asyncio.wait_for(asyncio.gather(*remaining_tasks, return_exceptions=True), timeout=1.0)
+                except asyncio.TimeoutError:
+                    pass  # Some tasks may still be running, but we tried
+
+            # Now force shutdown
             if hasattr(event_bus, "_is_running"):
                 event_bus._is_running = False
             if hasattr(event_bus, "event_queue") and event_bus.event_queue:
-                event_bus.event_queue.shutdown(immediate=True)
-
-        # Wait a bit for any remaining tasks to finish
-        print("🧹 Waiting for cleanup...")
-        await asyncio.sleep(1.0)
-
-        # Check remaining tasks and force cleanup if needed
-        remaining_tasks = [task for task in asyncio.all_tasks() if not task.done()]
-        if remaining_tasks:
-            print(f"⚠️  {len(remaining_tasks)} tasks still running, forcing cleanup...")
-
-            # First, try to cancel all tasks
-            for task in remaining_tasks:
-                if not task.done():
-                    task.cancel()
-
-            # Wait a bit for cancellation to take effect
-            await asyncio.sleep(0.5)
-
-            # Check which tasks are still running
-            still_running = [task for task in remaining_tasks if not task.done()]
-            if still_running:
-                print(f"⚠️  {len(still_running)} tasks still running after cancellation:")
-                for task in still_running:
-                    task_name = task.get_name() if hasattr(task, "get_name") else "unnamed"
-                    print(f"   - {task_name}")
-
-                # Try one more time with a shorter timeout
                 try:
-                    await asyncio.wait_for(asyncio.gather(*still_running, return_exceptions=True), timeout=2.0)
-                    print("✅ Remaining tasks completed")
-                except asyncio.TimeoutError:
-                    print("⚠️  Some tasks still hanging, but main function will exit")
-            else:
-                print("✅ All tasks cleaned up")
-        else:
-            print("✅ No remaining tasks")
+                    event_bus.event_queue.shutdown(immediate=True)
+                except Exception:
+                    pass
+
+            print("✅ Event bus stopped!")
+        except Exception as e:
+            print(f"⚠️  Error during shutdown: {e}")
+            print("✅ Event bus stopped with errors!")
 
     except Exception as e:
         print(f"❌ Error in main: {e}")
