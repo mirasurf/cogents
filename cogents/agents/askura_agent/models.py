@@ -8,8 +8,8 @@ from typing import Any, Dict, List, Optional, Sequence, Type, Union
 from langchain_core.messages import BaseMessage
 from pydantic import BaseModel, Field
 
-from cogents.common.consts import GEMINI_FLASH
-from cogents.common.utils import get_enum_value
+from cogents.base.consts import GEMINI_FLASH
+from cogents.base.utils import get_enum_value
 
 
 class ConversationStyle(str, Enum):

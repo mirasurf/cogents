@@ -7,7 +7,7 @@ into the cogents toolkit system.
 
 from typing import Any, Dict, List, Optional
 
-from cogents.common.logging import get_logger
+from cogents.base.logging import get_logger
 
 from .base import AsyncBaseToolkit, MCPNotAvailableError
 from .config import ToolkitConfig

@@ -209,3 +209,5 @@ thirdparty/
 document_cache/
 document_downloads/
 full.diff
+
+cogents/base/*.png

@@ -176,7 +176,7 @@ class TestSearchToolkit:
             result_count = result.count("Result ")
             assert result_count <= num_results
 
-    @patch("cogents.resources.websearch.TavilySearchWrapper")
+    @patch("cogents.ingreds.web_search.TavilySearchWrapper")
     async def test_tavily_search_success(self, mock_tavily_wrapper, search_toolkit):
         """Test successful Tavily search."""
         # Mock TavilySearchWrapper
@@ -184,7 +184,7 @@ class TestSearchToolkit:
         mock_tavily_wrapper.return_value = mock_instance
 
         # Mock search result
-        from cogents.resources.websearch.types import SearchResult, SourceItem
+        from cogents.base.base_search import SearchResult, SourceItem
 
         mock_sources = [
             SourceItem(title="Test Result 1", url="https://example1.com", content="Test content 1"),
@@ -203,7 +203,7 @@ class TestSearchToolkit:
         assert result.answer == "This is a test answer"
         mock_instance.search.assert_called_once_with(query="test query")
 
-    @patch("cogents.resources.websearch.TavilySearchWrapper")
+    @patch("cogents.ingreds.web_search.TavilySearchWrapper")
     async def test_tavily_search_error(self, mock_tavily_wrapper, search_toolkit):
         """Test Tavily search error handling."""
         # Mock TavilySearchWrapper to raise exception
@@ -212,7 +212,7 @@ class TestSearchToolkit:
         with pytest.raises(RuntimeError, match="Tavily search failed"):
             await search_toolkit.tavily_search("test query")
 
-    @patch("cogents.resources.websearch.GoogleAISearch")
+    @patch("cogents.ingreds.web_search.GoogleAISearch")
     async def test_google_ai_search_success(self, mock_google_ai, search_toolkit):
         """Test successful Google AI search."""
         # Mock GoogleAISearch
@@ -220,7 +220,7 @@ class TestSearchToolkit:
         mock_google_ai.return_value = mock_instance
 
         # Mock search result
-        from cogents.resources.websearch.types import SearchResult, SourceItem
+        from cogents.base.base_search import SearchResult, SourceItem
 
         mock_sources = [
             SourceItem(
@@ -244,7 +244,7 @@ class TestSearchToolkit:
             query="AI research trends", model="gemini-2.5-flash", temperature=0.0
         )
 
-    @patch("cogents.resources.websearch.GoogleAISearch")
+    @patch("cogents.ingreds.web_search.GoogleAISearch")
     async def test_google_ai_search_error(self, mock_google_ai, search_toolkit):
         """Test Google AI search error handling."""
         # Mock GoogleAISearch to raise exception
@@ -256,11 +256,11 @@ class TestSearchToolkit:
     @pytest.mark.parametrize("search_depth", ["basic", "advanced"])
     async def test_tavily_search_depth_options(self, search_depth, search_toolkit):
         """Test Tavily search with different depth options."""
-        with patch("cogents.resources.websearch.TavilySearchWrapper") as mock_wrapper:
+        with patch("cogents.ingreds.web_search.TavilySearchWrapper") as mock_wrapper:
             mock_instance = Mock()  # Use regular Mock, not AsyncMock
             mock_wrapper.return_value = mock_instance
 
-            from cogents.resources.websearch.types import SearchResult
+            from cogents.base.base_search import SearchResult
 
             mock_instance.search.return_value = SearchResult(query="test", sources=[], answer=None)
 
@@ -274,11 +274,11 @@ class TestSearchToolkit:
     @pytest.mark.parametrize("model", ["gemini-2.5-flash", "gemini-2.0-flash-exp"])
     async def test_google_ai_search_model_options(self, model, search_toolkit):
         """Test Google AI search with different model options."""
-        with patch("cogents.resources.websearch.GoogleAISearch") as mock_google:
+        with patch("cogents.ingreds.web_search.GoogleAISearch") as mock_google:
             mock_instance = Mock()  # Use regular Mock, not AsyncMock
             mock_google.return_value = mock_instance
 
-            from cogents.resources.websearch.types import SearchResult
+            from cogents.base.base_search import SearchResult
 
             mock_instance.search.return_value = SearchResult(query="test", sources=[], answer=None)
 
@@ -292,7 +292,7 @@ class TestSearchToolkit:
 class TestSearchToolkitIntegration:
     """Integration tests for SearchToolkit (require API keys)."""
 
-    @pytest.mark.skip(reason="Requires actual API keys")
+    @pytest.mark.integration
     async def test_real_search_api(self):
         """Test with real Serper API (requires API key)."""
         config = ToolkitConfig(
@@ -308,7 +308,7 @@ class TestSearchToolkitIntegration:
             assert "title" in item
             assert "link" in item
 
-    @pytest.mark.skip(reason="Requires actual API keys")
+    @pytest.mark.integration
     async def test_real_content_extraction(self):
         """Test with real content extraction (requires API key)."""
         config = ToolkitConfig(name="search", config={"JINA_API_KEY": "your_real_jina_key"})

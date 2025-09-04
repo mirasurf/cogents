@@ -7,7 +7,7 @@ using the arXiv API with advanced query capabilities.
 
 from typing import Callable, Dict, Generator, List, Optional
 
-from cogents.common.logging import get_logger
+from cogents.base.logging import get_logger
 
 from ..base import AsyncBaseToolkit
 from ..config import ToolkitConfig

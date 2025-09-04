@@ -11,8 +11,8 @@ from typing import Any, Callable, Dict, List, Optional, Union
 
 from langchain_core.tools import BaseTool, tool
 
-from cogents.common.llm import BaseLLMClient
-from cogents.common.logging import get_logger
+from cogents.base.llm import BaseLLMClient
+from cogents.base.logging import get_logger
 
 from .config import ToolkitConfig
 

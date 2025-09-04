@@ -11,9 +11,9 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import Send
 
-from cogents.base import BaseResearcher, ResearchOutput
-from cogents.common.logging import get_logger
-from cogents.common.typing_compat import override
+from cogents.base.base_agent import BaseResearcher, ResearchOutput
+from cogents.base.logging import get_logger
+from cogents.base.typing_compat import override
 
 from .configuration import Configuration
 from .prompts import answer_instructions, query_writer_instructions, reflection_instructions
@@ -345,7 +345,7 @@ class SeekraAgent(BaseResearcher):
         runnable_config = Configuration.from_runnable_config(config) if config else self.configuration
 
         # Use the TavilySearchWrapper
-        from cogents.resources.websearch import TavilySearchWrapper
+        from cogents.ingreds.web_search import TavilySearchWrapper
 
         try:
             # Initialize Tavily Search client
@@ -398,7 +398,7 @@ class SeekraAgent(BaseResearcher):
 
     def _google_research_node(self, state: WebSearchState, config: RunnableConfig) -> ResearchState:
         """Perform web research using real Google Search API or LLM simulation."""
-        from cogents.resources.websearch import GoogleAISearch
+        from cogents.ingreds.web_search import GoogleAISearch
 
         try:
             search_query = state["search_query"]

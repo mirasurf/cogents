@@ -5,14 +5,14 @@
 Cogents is a collection of essential building blocks for constructing sophisticated multi-agent systems.
 
 ### Key Modules
-- `cogents.common.llm` - LLM provider abstractions with support for OpenAI, OpenRouter, Ollama, and LlamaCpp
+- `cogents.base.llm` - LLM provider abstractions with support for OpenAI, OpenRouter, Ollama, and LlamaCpp
 - `cogents.agents` - Various agent implementations
 - `cogents.memory` - Memory management for agents
 - `cogents.sensory` - Sensory processing capabilities
 - `cogents.toolify` - Tool integration framework
 
 ### LLM Providers
-Supported providers in `cogents.common.llm`:
+Supported providers in `cogents.base.llm`:
 - `openai` - OpenAI API compatible services
 - `openrouter` - OpenRouter API
 - `ollama` - Local Ollama instances  
@@ -56,7 +56,7 @@ python -m cogents.example
 ## LLM Usage Examples
 
 ```python
-from cogents.common.llm import get_llm_client
+from cogents.base.llm import get_llm_client
 
 # OpenAI/OpenRouter providers
 client = get_llm_client(provider="openai", api_key="sk-...")
@@ -141,6 +141,7 @@ async def test_get_image_info_success(self, image_toolkit):
 - Use `make lint` to run linting (flake8, mypy)
 - Use `make quality` to run all quality checks
 - Use `make autofix` to auto-fix code quality issues
+- Keep the first-level folder stuctures of `cogents`, `examples`, and `tests` as the same.
 
 ## Development Environment Tips
 

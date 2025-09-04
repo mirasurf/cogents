@@ -9,7 +9,7 @@ from typing import Any, Optional
 from langchain_core.runnables import RunnableConfig
 from pydantic import BaseModel, Field
 
-from cogents.common.consts import GEMINI_FLASH
+from cogents.base.consts import GEMINI_FLASH
 
 
 class Configuration(BaseModel):

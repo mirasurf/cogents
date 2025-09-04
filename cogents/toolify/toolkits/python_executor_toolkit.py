@@ -19,7 +19,7 @@ import matplotlib
 matplotlib.use("Agg")  # Use non-interactive backend
 import matplotlib.pyplot as plt
 
-from cogents.common.logging import get_logger
+from cogents.base.logging import get_logger
 
 from ..base import AsyncBaseToolkit
 from ..config import ToolkitConfig
