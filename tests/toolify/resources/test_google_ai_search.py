@@ -7,7 +7,7 @@ import os
 import pytest
 
 from cogents.base.base_search import SearchResult, SourceItem
-from cogents.ingreds.websearch.google_ai_search import GoogleAISearch
+from cogents.ingreds.web_search.google_ai_search import GoogleAISearch
 
 
 @pytest.mark.integration

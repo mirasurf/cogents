@@ -3,8 +3,8 @@ import uuid
 import pytest
 
 from cogents.base.base_vectorstore import BaseVectorStore
-from cogents.ingreds.vectorstore.pgvector import PGVectorStore
-from cogents.ingreds.vectorstore.weaviate import WeaviateVectorStore
+from cogents.ingreds.vector_store.pgvector import PGVectorStore
+from cogents.ingreds.vector_store.weaviate import WeaviateVectorStore
 
 
 @pytest.mark.integration

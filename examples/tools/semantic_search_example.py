@@ -23,10 +23,10 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from cogents.ingreds.semsearch import SemanticSearch, SemanticSearchConfig
-from cogents.ingreds.semsearch.document_processor import ChunkingConfig
-from cogents.ingreds.semsearch.weaviate_client import WeaviateConfig
-from cogents.ingreds.websearch import TavilySearchConfig, TavilySearchWrapper
+from cogents.ingreds.semantic_search import SemanticSearch, SemanticSearchConfig
+from cogents.ingreds.semantic_search.document_processor import ChunkingConfig
+from cogents.ingreds.semantic_search.weaviate_client import WeaviateConfig
+from cogents.ingreds.web_search import TavilySearchConfig, TavilySearchWrapper
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

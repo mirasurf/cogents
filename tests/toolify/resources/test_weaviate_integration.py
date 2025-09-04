@@ -17,7 +17,7 @@ import pytest
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from cogents.ingreds.semsearch.weaviate_client import DocumentChunk, WeaviateConfig, WeaviateManager
+from cogents.ingreds.semantic_search.weaviate_client import DocumentChunk, WeaviateConfig, WeaviateManager
 
 
 @pytest.mark.integration

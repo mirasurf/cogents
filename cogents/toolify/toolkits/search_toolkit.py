@@ -337,7 +337,7 @@ Please list any URLs, links, or references mentioned in the content that could p
         self.logger.info(f"Performing Tavily search for query: {query}")
 
         try:
-            from cogents.ingreds.websearch import TavilySearchWrapper
+            from cogents.ingreds.web_search import TavilySearchWrapper
 
             # Initialize Tavily Search client with configuration
             config_kwargs = {
@@ -414,7 +414,7 @@ Please list any URLs, links, or references mentioned in the content that could p
         self.logger.info(f"Performing Google AI search for query: {query}")
 
         try:
-            from cogents.ingreds.websearch import GoogleAISearch
+            from cogents.ingreds.web_search import GoogleAISearch
 
             # Initialize Google AI Search client
             google = GoogleAISearch()

@@ -345,7 +345,7 @@ class SeekraAgent(BaseResearcher):
         runnable_config = Configuration.from_runnable_config(config) if config else self.configuration
 
         # Use the TavilySearchWrapper
-        from cogents.ingreds.websearch import TavilySearchWrapper
+        from cogents.ingreds.web_search import TavilySearchWrapper
 
         try:
             # Initialize Tavily Search client
@@ -398,7 +398,7 @@ class SeekraAgent(BaseResearcher):
 
     def _google_research_node(self, state: WebSearchState, config: RunnableConfig) -> ResearchState:
         """Perform web research using real Google Search API or LLM simulation."""
-        from cogents.ingreds.websearch import GoogleAISearch
+        from cogents.ingreds.web_search import GoogleAISearch
 
         try:
             search_query = state["search_query"]

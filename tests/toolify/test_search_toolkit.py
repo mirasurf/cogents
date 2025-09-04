@@ -176,7 +176,7 @@ class TestSearchToolkit:
             result_count = result.count("Result ")
             assert result_count <= num_results
 
-    @patch("cogents.ingreds.websearch.TavilySearchWrapper")
+    @patch("cogents.ingreds.web_search.TavilySearchWrapper")
     async def test_tavily_search_success(self, mock_tavily_wrapper, search_toolkit):
         """Test successful Tavily search."""
         # Mock TavilySearchWrapper
@@ -203,7 +203,7 @@ class TestSearchToolkit:
         assert result.answer == "This is a test answer"
         mock_instance.search.assert_called_once_with(query="test query")
 
-    @patch("cogents.ingreds.websearch.TavilySearchWrapper")
+    @patch("cogents.ingreds.web_search.TavilySearchWrapper")
     async def test_tavily_search_error(self, mock_tavily_wrapper, search_toolkit):
         """Test Tavily search error handling."""
         # Mock TavilySearchWrapper to raise exception
@@ -212,7 +212,7 @@ class TestSearchToolkit:
         with pytest.raises(RuntimeError, match="Tavily search failed"):
             await search_toolkit.tavily_search("test query")
 
-    @patch("cogents.ingreds.websearch.GoogleAISearch")
+    @patch("cogents.ingreds.web_search.GoogleAISearch")
     async def test_google_ai_search_success(self, mock_google_ai, search_toolkit):
         """Test successful Google AI search."""
         # Mock GoogleAISearch
@@ -244,7 +244,7 @@ class TestSearchToolkit:
             query="AI research trends", model="gemini-2.5-flash", temperature=0.0
         )
 
-    @patch("cogents.ingreds.websearch.GoogleAISearch")
+    @patch("cogents.ingreds.web_search.GoogleAISearch")
     async def test_google_ai_search_error(self, mock_google_ai, search_toolkit):
         """Test Google AI search error handling."""
         # Mock GoogleAISearch to raise exception
@@ -256,7 +256,7 @@ class TestSearchToolkit:
     @pytest.mark.parametrize("search_depth", ["basic", "advanced"])
     async def test_tavily_search_depth_options(self, search_depth, search_toolkit):
         """Test Tavily search with different depth options."""
-        with patch("cogents.ingreds.websearch.TavilySearchWrapper") as mock_wrapper:
+        with patch("cogents.ingreds.web_search.TavilySearchWrapper") as mock_wrapper:
             mock_instance = Mock()  # Use regular Mock, not AsyncMock
             mock_wrapper.return_value = mock_instance
 
@@ -274,7 +274,7 @@ class TestSearchToolkit:
     @pytest.mark.parametrize("model", ["gemini-2.5-flash", "gemini-2.0-flash-exp"])
     async def test_google_ai_search_model_options(self, model, search_toolkit):
         """Test Google AI search with different model options."""
-        with patch("cogents.ingreds.websearch.GoogleAISearch") as mock_google:
+        with patch("cogents.ingreds.web_search.GoogleAISearch") as mock_google:
             mock_instance = Mock()  # Use regular Mock, not AsyncMock
             mock_google.return_value = mock_instance
 

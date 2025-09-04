@@ -65,24 +65,6 @@ class BaseWebPage(ABC):
             A list of dictionaries containing the observed data.
         """
 
-    @abstractmethod
-    async def agent(
-        self, prompt: str, provider: str, model: str, options: Optional[Dict] = None, **kwargs
-    ) -> Dict[str, Any]:
-        """
-        Automates an entire workflow autonomously based on a high-level natural language prompt.
-        This represents the most agentic capability, orchestrating Act, Extract, Observe internally.
-
-        Args:
-            prompt: The natural language prompt to execute the action.
-            provider: The provider to use for the action.
-            model: The model to use for the action.
-            options: Additional keyword arguments.
-            kwargs: Additional keyword arguments.
-        Returns:
-            The result of the action.
-        """
-
 
 class BaseWebSurfer(ABC):
     """
@@ -108,4 +90,17 @@ class BaseWebSurfer(ABC):
 
         Returns:
             None.
+        """
+
+    @abstractmethod
+    async def agent(self, prompt: str, **kwargs) -> Any:
+        """
+        Automates an entire workflow autonomously based on a high-level natural language prompt.
+        This represents the most agentic capability, orchestrating Act, Extract, Observe internally.
+
+        Args:
+            prompt: The natural language prompt to execute the action.
+            kwargs: Additional keyword arguments.
+        Returns:
+            An agent instance capable of executing the workflow.
         """
