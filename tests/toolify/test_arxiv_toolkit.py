@@ -5,8 +5,7 @@ Tests for ArxivToolkit functionality.
 from unittest.mock import MagicMock, patch
 
 import pytest
-
-from cogents.core.toolify import ToolkitConfig, get_toolkit
+from cogents_core.toolify import ToolkitConfig, get_toolkit
 
 
 @pytest.fixture
@@ -40,7 +39,7 @@ class TestArxivToolkit:
             assert tool_name in tools_map
             assert callable(tools_map[tool_name])
 
-    @patch("cogents.toolify.toolkits.arxiv_toolkit.arxiv")
+    @patch("cogents.toolkits.arxiv_toolkit.arxiv")
     async def test_search_papers_success(self, mock_arxiv, arxiv_toolkit):
         """Test successful paper search."""
         # Mock arxiv search results
@@ -85,7 +84,7 @@ class TestArxivToolkit:
         assert result[0]["authors"] == ["Test Author"]
         assert "cs.AI" in result[0]["categories"]
 
-    @patch("cogents.toolify.toolkits.arxiv_toolkit.arxiv")
+    @patch("cogents.toolkits.arxiv_toolkit.arxiv")
     async def test_search_papers_with_filters(self, mock_arxiv, arxiv_toolkit):
         """Test paper search with advanced filters."""
         # Mock arxiv components
@@ -125,7 +124,7 @@ class TestArxivToolkit:
         assert len(result) == 1
         assert result[0]["title"] == "Filtered Paper"
 
-    @patch("cogents.toolify.toolkits.arxiv_toolkit.arxiv")
+    @patch("cogents.toolkits.arxiv_toolkit.arxiv")
     async def test_search_papers_error_handling(self, mock_arxiv, arxiv_toolkit):
         """Test error handling in paper search."""
         # Mock arxiv to raise an exception
@@ -134,7 +133,7 @@ class TestArxivToolkit:
         with pytest.raises(Exception):
             await arxiv_toolkit.search_papers("test query")
 
-    @patch("cogents.toolify.toolkits.arxiv_toolkit.arxiv")
+    @patch("cogents.toolkits.arxiv_toolkit.arxiv")
     @patch("os.makedirs")
     @patch("re.sub")
     async def test_download_papers_success(self, mock_re_sub, mock_makedirs, mock_arxiv, arxiv_toolkit):
@@ -167,7 +166,7 @@ class TestArxivToolkit:
         assert "Successfully downloaded 1 papers" in result
         mock_paper.download_pdf.assert_called_once()
 
-    @patch("cogents.toolify.toolkits.arxiv_toolkit.arxiv")
+    @patch("cogents.toolkits.arxiv_toolkit.arxiv")
     async def test_download_papers_with_failures(self, mock_arxiv, arxiv_toolkit):
         """Test paper download with some failures."""
         # Mock papers - one successful, one failing
@@ -200,7 +199,7 @@ class TestArxivToolkit:
             assert "Successfully downloaded 1 papers" in result
             assert "Failed downloads (1)" in result
 
-    @patch("cogents.toolify.toolkits.arxiv_toolkit.arxiv")
+    @patch("cogents.toolkits.arxiv_toolkit.arxiv")
     async def test_get_paper_details_success(self, mock_arxiv, arxiv_toolkit):
         """Test successful paper details retrieval."""
         # Mock paper details
@@ -244,7 +243,7 @@ class TestArxivToolkit:
         assert result["primary_category"] == "cs.AI"
         assert len(result["links"]) == 1
 
-    @patch("cogents.toolify.toolkits.arxiv_toolkit.arxiv")
+    @patch("cogents.toolkits.arxiv_toolkit.arxiv")
     async def test_get_paper_details_not_found(self, mock_arxiv, arxiv_toolkit):
         """Test paper details for non-existent paper."""
         mock_client = MagicMock()
@@ -269,7 +268,7 @@ class TestArxivToolkit:
 
     async def test_paper_id_cleaning(self, arxiv_toolkit):
         """Test that paper IDs are cleaned correctly."""
-        with patch("cogents.toolify.toolkits.arxiv_toolkit.arxiv") as mock_arxiv:
+        with patch("cogents.toolkits.arxiv_toolkit.arxiv") as mock_arxiv:
             mock_client = MagicMock()
             mock_client.results.return_value = iter([])
 
@@ -302,7 +301,7 @@ class TestArxivToolkit:
     )
     async def test_search_query_types(self, arxiv_toolkit, query, expected_type):
         """Test different types of search queries."""
-        with patch("cogents.toolify.toolkits.arxiv_toolkit.arxiv") as mock_arxiv:
+        with patch("cogents.toolkits.arxiv_toolkit.arxiv") as mock_arxiv:
             mock_client = MagicMock()
             mock_client.results.return_value = iter([])
 

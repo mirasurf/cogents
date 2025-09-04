@@ -6,8 +6,7 @@ import base64
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
-from cogents.core.toolify import ToolkitConfig, get_toolkit
+from cogents_core.toolify import ToolkitConfig, get_toolkit
 
 
 @pytest.fixture

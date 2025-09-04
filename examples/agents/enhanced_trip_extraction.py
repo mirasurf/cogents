@@ -7,10 +7,9 @@ extracted information rather than starting from scratch each time.
 
 from typing import Any, Dict, Optional
 
+from cogents_core.llm import get_llm_client_instructor
+from cogents_core.logging_config import get_logger
 from langchain_core.tools import tool
-
-from cogents.core.base.llm import get_llm_client_instructor
-from cogents.core.base.logging import get_logger
 
 from .models import TripPlanContext
 

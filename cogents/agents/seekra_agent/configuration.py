@@ -6,10 +6,9 @@ Based on the gemini-fullstack-langgraph-quickstart backend configuration.
 import os
 from typing import Any, Optional
 
+from cogents_core.consts import GEMINI_FLASH
 from langchain_core.runnables import RunnableConfig
 from pydantic import BaseModel, Field
-
-from cogents.core.base.consts import GEMINI_FLASH
 
 
 class Configuration(BaseModel):

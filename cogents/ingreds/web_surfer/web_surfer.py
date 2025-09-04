@@ -2,11 +2,10 @@ import asyncio
 import logging
 from typing import Any, Dict, List, Optional, Union
 
+from cogents_core.base.base_websurfer import BaseWebPage, BaseWebSurfer, ObserveResult
+from cogents_core.llm import BaseLLMClient
+from cogents_core.typing_compat import override
 from pydantic import BaseModel
-
-from cogents.core.base.base_websurfer import BaseWebPage, BaseWebSurfer, ObserveResult
-from cogents.core.base.llm import BaseLLMClient
-from cogents.core.base.typing_compat import override
 
 try:
     from browser_use import Agent, BrowserSession, Tools

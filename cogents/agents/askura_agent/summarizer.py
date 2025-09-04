@@ -1,7 +1,7 @@
 from typing import List, Optional
 
-from cogents.core.base.llm import BaseLLMClient
-from cogents.core.base.logging import get_logger
+from cogents_core.llm import BaseLLMClient
+from cogents_core.logging_config import get_logger
 
 from .models import AskuraConfig, AskuraState
 from .reflection import Reflection

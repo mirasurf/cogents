@@ -696,14 +696,14 @@ colorama = {version = "*", markers = "platform_system == \"Windows\""}
 
 [[package]]
 name = "cogents-core"
-version = "0.1.1"
+version = "0.1.2"
 description = "Towards a cognitive agentic framework"
 optional = false
 python-versions = "<4.0,>=3.11"
 groups = ["main"]
 files = [
-    {file = "cogents_core-0.1.1-py3-none-any.whl", hash = "sha256:b512400e53c295ca7ca53943da5e7cd3cfb1ca6c79b7b336b7e888dd72a1157a"},
-    {file = "cogents_core-0.1.1.tar.gz", hash = "sha256:35bf68ffb79cee2676dc5f037327d3389fe38e14a82691de6e6d4887b864b573"},
+    {file = "cogents_core-0.1.2-py3-none-any.whl", hash = "sha256:a9a177d8858a1b79233b95a71c0bad2d9be6273c44f88cd060cb0193abd558dc"},
+    {file = "cogents_core-0.1.2.tar.gz", hash = "sha256:feff59e5c5d6596b099261577ebb5972ec8b48443c3d314d79acc9686e41896b"},
 ]
 
 [package.dependencies]
@@ -10282,4 +10282,4 @@ cffi = ["cffi (>=1.17) ; python_version >= \"3.13\" and platform_python_implemen
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.11"
-content-hash = "710e69c1984afdfd348ae2b09a32aa5ecb36ebc207b23970096c49c087e47e42"
+content-hash = "c8acf518534e61be6f39268fef1aaf980ff1e8cf386defa2dae45a497cd4f56c"

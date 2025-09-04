@@ -5,8 +5,8 @@ Integration tests for Google AI Search functionality.
 import os
 
 import pytest
+from cogents_core.base.base_search import SearchResult, SourceItem
 
-from cogents.core.base.base_search import SearchResult, SourceItem
 from cogents.ingreds.web_search.google_ai_search import GoogleAISearch
 
 

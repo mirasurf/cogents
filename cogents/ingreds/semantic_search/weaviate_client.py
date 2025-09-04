@@ -11,11 +11,10 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
 import weaviate
+from cogents_core.consts import OLLAMA_EMBEDDING_MODEL, OLLAMA_GENERATIVE_MODEL
 from pydantic import BaseModel, Field
 from weaviate.classes.config import Configure, DataType, Property
 from weaviate.classes.query import Filter
-
-from cogents.core.base.consts import OLLAMA_EMBEDDING_MODEL, OLLAMA_GENERATIVE_MODEL
 
 from .types import DocumentChunk
 

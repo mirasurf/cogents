@@ -8,10 +8,9 @@ import os
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
+from cogents_core.base.base_search import BaseSearch, SearchResult, SourceItem
 from google.genai import Client as GenAIClient
 from google.genai import types
-
-from cogents.core.base.base_search import BaseSearch, SearchResult, SourceItem
 
 logger = logging.getLogger(__name__)
 

@@ -6,14 +6,13 @@ Enhanced base class designed for extensibility.
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Type
 
+from cogents_core.base.base_agent import BaseResearcher, ResearchOutput
+from cogents_core.logging_config import get_logger
+from cogents_core.typing_compat import override
 from langchain_core.messages import AIMessage, AnyMessage, HumanMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import Send
-
-from cogents.core.base.base_agent import BaseResearcher, ResearchOutput
-from cogents.core.base.logging import get_logger
-from cogents.core.base.typing_compat import override
 
 from .configuration import Configuration
 from .prompts import answer_instructions, query_writer_instructions, reflection_instructions

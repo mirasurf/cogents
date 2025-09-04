@@ -9,9 +9,9 @@ import logging
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
+from cogents_core.base.base_search import BaseSearch, SearchResult
 from pydantic import BaseModel, Field
 
-from cogents.core.base.base_search import BaseSearch, SearchResult
 from cogents.ingreds.web_search import TavilySearchWrapper
 
 from .document_processor import ChunkingConfig, DocumentProcessor

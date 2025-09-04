@@ -4,10 +4,9 @@ Conversation Manager for AskuraAgent - Handles dynamic conversation analysis and
 
 from typing import List, Optional
 
+from cogents_core.llm import BaseLLMClient
+from cogents_core.logging_config import get_logger
 from langchain_core.messages import HumanMessage
-
-from cogents.core.base.llm import BaseLLMClient
-from cogents.core.base.logging import get_logger
 
 from .models import AskuraConfig, AskuraState, ConversationContext
 from .prompts import get_conversation_analysis_prompts, get_response_generation_prompts

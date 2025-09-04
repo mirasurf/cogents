@@ -9,9 +9,9 @@ import tempfile
 from unittest.mock import Mock, patch
 
 import pytest
+from cogents_core.toolify.config import ToolkitConfig
 
-from cogents.core.toolify.config import ToolkitConfig
-from cogents.core.toolify.toolkits.bash_toolkit import BashToolkit
+from cogents.toolkits.bash_toolkit import BashToolkit
 
 
 class TestBashToolkitInitialization:

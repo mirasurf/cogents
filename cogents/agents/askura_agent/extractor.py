@@ -4,10 +4,9 @@ Information Extractor for AskuraAgent - Handles multi-topic information extracti
 
 from typing import Any, Dict, Optional
 
+from cogents_core.llm import BaseLLMClient
+from cogents_core.logging_config import get_logger
 from langchain_core.tools import BaseTool
-
-from cogents.core.base.llm import BaseLLMClient
-from cogents.core.base.logging import get_logger
 
 from .models import AskuraConfig, AskuraState, InformationSlot
 

@@ -8,16 +8,15 @@ collect required information through natural conversation flow.
 import uuid
 from typing import Any, Dict, List, Optional
 
+from cogents_core.base import BaseConversationAgent
+from cogents_core.logging_config import get_logger
+from cogents_core.tracing import NodeLoggingCallback, TokenUsageCallback
+from cogents_core.typing_compat import override
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
-
-from cogents.core.base import BaseConversationAgent
-from cogents.core.base.logging import get_logger
-from cogents.core.base.tracing import NodeLoggingCallback, TokenUsageCallback
-from cogents.core.base.typing_compat import override
 
 from .conversation import ConversationManager
 from .extractor import InformationExtractor

@@ -1,8 +1,8 @@
 import uuid
 
 import pytest
+from cogents_core.base.base_vectorstore import BaseVectorStore
 
-from cogents.core.base.base_vectorstore import BaseVectorStore
 from cogents.ingreds.vector_store.pgvector import PGVectorStore
 from cogents.ingreds.vector_store.weaviate import WeaviateVectorStore
 

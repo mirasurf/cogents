@@ -5,11 +5,11 @@ Schemas for AskuraAgent - Flexible data structures for dynamic conversations.
 from enum import Enum
 from typing import Any, Dict, List, Optional, Sequence, Type, Union
 
+from cogents_core.consts import GEMINI_FLASH
 from langchain_core.messages import BaseMessage
 from pydantic import BaseModel, Field
 
-from cogents.core.base.consts import GEMINI_FLASH
-from cogents.core.base.utils import get_enum_value
+from cogents.utils import get_enum_value
 
 
 class ConversationStyle(str, Enum):

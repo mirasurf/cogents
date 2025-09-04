@@ -10,10 +10,9 @@ import logging
 from datetime import datetime
 from typing import List, Optional
 
+from cogents_core.base.base_search import BaseSearch, SearchResult
 from langchain_tavily import TavilySearch
 from pydantic import BaseModel, ConfigDict, Field
-
-from cogents.core.base.base_search import BaseSearch, SearchResult
 
 logger = logging.getLogger(__name__)
 

@@ -16,7 +16,8 @@ from pydantic import BaseModel
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "../../../"))
 
-from cogents.core.base.base_websurfer import ObserveResult
+from cogents_core.base.base_websurfer import ObserveResult
+
 from cogents.ingreds.web_surfer.web_surfer import BrowserUseLLMAdapter, WebSurfer, WebSurferPage
 
 

@@ -33,8 +33,9 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "../.."))
 
 import logging
 
-from cogents.core.base.llm import get_llm_client
-from cogents.core.base.logging import setup_logging
+from cogents_core.llm import get_llm_client
+from cogents_core.logging_config import setup_logging
+
 from cogents.ingreds.web_surfer.web_surfer import WebSurfer
 
 # Setup logging

@@ -6,8 +6,7 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import aiohttp
 import pytest
-
-from cogents.core.toolify import ToolkitConfig, get_toolkit
+from cogents_core.toolify import ToolkitConfig, get_toolkit
 
 
 @pytest.fixture
@@ -106,8 +105,8 @@ class TestSearchToolkit:
         assert isinstance(result, str)
         assert "Error" in result
 
-    @patch("cogents.toolify.toolkits.search_toolkit.SearchToolkit.get_web_content")
-    @patch("cogents.toolify.toolkits.search_toolkit.SearchToolkit.llm_client")
+    @patch("cogents.toolkits.search_toolkit.SearchToolkit.get_web_content")
+    @patch("cogents.toolkits.search_toolkit.SearchToolkit.llm_client")
     async def test_web_qa_with_question(self, mock_llm, mock_get_web_content, search_toolkit):
         """Test web Q&A with a specific question."""
         # Mock content extraction
@@ -123,8 +122,8 @@ class TestSearchToolkit:
         # LLM is called twice: once for answering and once for extracting related links
         assert mock_llm.completion.call_count == 2
 
-    @patch("cogents.toolify.toolkits.search_toolkit.SearchToolkit.get_web_content")
-    @patch("cogents.toolify.toolkits.search_toolkit.SearchToolkit.llm_client")
+    @patch("cogents.toolkits.search_toolkit.SearchToolkit.get_web_content")
+    @patch("cogents.toolkits.search_toolkit.SearchToolkit.llm_client")
     async def test_web_qa_summary(self, mock_llm, mock_get_web_content, search_toolkit):
         """Test web Q&A for content summary."""
         # Mock content extraction
@@ -184,7 +183,7 @@ class TestSearchToolkit:
         mock_tavily_wrapper.return_value = mock_instance
 
         # Mock search result
-        from cogents.core.base.base_search import SearchResult, SourceItem
+        from cogents_core.base.base_search import SearchResult, SourceItem
 
         mock_sources = [
             SourceItem(title="Test Result 1", url="https://example1.com", content="Test content 1"),
@@ -220,7 +219,7 @@ class TestSearchToolkit:
         mock_google_ai.return_value = mock_instance
 
         # Mock search result
-        from cogents.core.base.base_search import SearchResult, SourceItem
+        from cogents_core.base.base_search import SearchResult, SourceItem
 
         mock_sources = [
             SourceItem(
@@ -260,7 +259,7 @@ class TestSearchToolkit:
             mock_instance = Mock()  # Use regular Mock, not AsyncMock
             mock_wrapper.return_value = mock_instance
 
-            from cogents.core.base.base_search import SearchResult
+            from cogents_core.base.base_search import SearchResult
 
             mock_instance.search.return_value = SearchResult(query="test", sources=[], answer=None)
 
@@ -278,7 +277,7 @@ class TestSearchToolkit:
             mock_instance = Mock()  # Use regular Mock, not AsyncMock
             mock_google.return_value = mock_instance
 
-            from cogents.core.base.base_search import SearchResult
+            from cogents_core.base.base_search import SearchResult
 
             mock_instance.search.return_value = SearchResult(query="test", sources=[], answer=None)
 
