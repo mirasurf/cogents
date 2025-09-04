@@ -55,7 +55,7 @@ cogents/
 ## Creating a New Agent
 
 ### From Base Classes
-Start with the base agent classes in `cogents.base` to create custom agents with full control over behavior and capabilities.
+Start with the base agent classes in `cogents.core.base` to create custom agents with full control over behavior and capabilities.
 
 #### Base Agent Class Hierarchy
 

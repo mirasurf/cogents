@@ -1,1 +1,0 @@
-# Goalith unit tests

@@ -4,9 +4,9 @@ from typing import Any, Dict, List, Optional, Union
 
 from pydantic import BaseModel
 
-from cogents.base.base_websurfer import BaseWebPage, BaseWebSurfer, ObserveResult
-from cogents.base.llm import BaseLLMClient
-from cogents.base.typing_compat import override
+from cogents.core.base.base_websurfer import BaseWebPage, BaseWebSurfer, ObserveResult
+from cogents.core.base.llm import BaseLLMClient
+from cogents.core.base.typing_compat import override
 
 try:
     from browser_use import Agent, BrowserSession, Tools

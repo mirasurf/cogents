@@ -8,56 +8,51 @@ import uuid
 
 import pytest
 
-# Import common test fixtures from existing modules
-try:
-    from tests.goalith.conftest import (
-        decomposer_registry,
-        empty_graph_store,
-        memory_store,
-        mock_context,
-        populated_graph_store,
-        sample_goal_node,
-        sample_subgoal_node,
-        sample_task_node,
-        sample_update_event,
-    )
-except ImportError:
-    # If goalith tests aren't available, create empty fixtures
-    @pytest.fixture
-    def sample_goal_node():
-        return None
 
-    @pytest.fixture
-    def sample_task_node():
-        return None
+# If goalith tests aren't available, create empty fixtures
+@pytest.fixture
+def sample_goal_node():
+    return None
 
-    @pytest.fixture
-    def sample_subgoal_node():
-        return None
 
-    @pytest.fixture
-    def empty_graph_store():
-        return None
+@pytest.fixture
+def sample_task_node():
+    return None
 
-    @pytest.fixture
-    def populated_graph_store():
-        return None
 
-    @pytest.fixture
-    def sample_update_event():
-        return None
+@pytest.fixture
+def sample_subgoal_node():
+    return None
 
-    @pytest.fixture
-    def memory_store():
-        return None
 
-    @pytest.fixture
-    def decomposer_registry():
-        return None
+@pytest.fixture
+def empty_graph_store():
+    return None
 
-    @pytest.fixture
-    def mock_context():
-        return {}
+
+@pytest.fixture
+def populated_graph_store():
+    return None
+
+
+@pytest.fixture
+def sample_update_event():
+    return None
+
+
+@pytest.fixture
+def memory_store():
+    return None
+
+
+@pytest.fixture
+def decomposer_registry():
+    return None
+
+
+@pytest.fixture
+def mock_context():
+    return {}
 
 
 # Vectorstore integration test fixtures
@@ -289,10 +284,10 @@ def ensure_toolkits_available():
         pass
 
         # Force toolkit discovery if needed
-        from cogents.toolify.registry import ToolkitRegistry
+        from cogents.core.toolify.registry import ToolkitRegistry
 
         if len(ToolkitRegistry.list_toolkits()) < 10:  # Should have many toolkits
-            from cogents.toolify.registry import _discover_builtin_toolkits
+            from cogents.core.toolify.registry import _discover_builtin_toolkits
 
             _discover_builtin_toolkits()
 
@@ -307,7 +302,7 @@ def ensure_toolkits_available():
 @pytest.fixture
 def available_toolkits():
     """Get list of all available toolkits."""
-    from cogents.toolify.registry import ToolkitRegistry
+    from cogents.core.toolify.registry import ToolkitRegistry
 
     return ToolkitRegistry.list_toolkits()
 
@@ -315,7 +310,7 @@ def available_toolkits():
 @pytest.fixture
 def toolkit_registry():
     """Get the toolkit registry instance."""
-    from cogents.toolify.registry import ToolkitRegistry
+    from cogents.core.toolify.registry import ToolkitRegistry
 
     return ToolkitRegistry
 
@@ -323,7 +318,7 @@ def toolkit_registry():
 @pytest.fixture
 def mock_toolkit_config():
     """Create a mock toolkit configuration for testing."""
-    from cogents.toolify.config import ToolkitConfig
+    from cogents.core.toolify.config import ToolkitConfig
 
     return ToolkitConfig(
         mode="builtin",
@@ -344,7 +339,7 @@ def ensure_toolkit_available():
     """Decorator to ensure a specific toolkit is available for testing."""
 
     def _ensure_toolkit(toolkit_name):
-        from cogents.toolify.registry import ToolkitRegistry
+        from cogents.core.toolify.registry import ToolkitRegistry
 
         if not ToolkitRegistry.is_registered(toolkit_name):
             pytest.skip(f"Toolkit '{toolkit_name}' not available for testing")
@@ -359,7 +354,7 @@ def toolkit_availability_check():
     """Check if specific toolkits are available and skip tests if not."""
 
     def _check_availability(required_toolkits):
-        from cogents.toolify.registry import ToolkitRegistry
+        from cogents.core.toolify.registry import ToolkitRegistry
 
         missing_toolkits = []
         for toolkit_name in required_toolkits:
@@ -377,7 +372,7 @@ def toolkit_availability_check():
 @pytest.fixture
 def restore_toolkits_after_test():
     """Fixture to restore toolkits if they were cleared during a test."""
-    from cogents.toolify.registry import ToolkitRegistry
+    from cogents.core.toolify.registry import ToolkitRegistry
 
     # Save current state
     original_toolkits = ToolkitRegistry.list_toolkits()
@@ -389,7 +384,7 @@ def restore_toolkits_after_test():
     if len(current_toolkits) < len(original_toolkits):
         print(f"Toolkits were lost during test. Restoring from {len(current_toolkits)} to {len(original_toolkits)}")
         try:
-            from cogents.toolify.registry import _discover_builtin_toolkits
+            from cogents.core.toolify.registry import _discover_builtin_toolkits
 
             _discover_builtin_toolkits()
         except Exception as e:

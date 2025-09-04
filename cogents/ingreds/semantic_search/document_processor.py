@@ -13,7 +13,7 @@ from typing import Any, Dict, List, Optional
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from pydantic import BaseModel, Field
 
-from cogents.base.base_search import SearchResult, SourceItem
+from cogents.core.base.base_search import SearchResult, SourceItem
 
 from .types import DocumentChunk, ProcessedDocument
 

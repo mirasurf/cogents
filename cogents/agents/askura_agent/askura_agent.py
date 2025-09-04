@@ -14,10 +14,10 @@ from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
 
-from cogents.base import BaseConversationAgent
-from cogents.base.logging import get_logger
-from cogents.base.tracing import NodeLoggingCallback, TokenUsageCallback
-from cogents.base.typing_compat import override
+from cogents.core.base import BaseConversationAgent
+from cogents.core.base.logging import get_logger
+from cogents.core.base.tracing import NodeLoggingCallback, TokenUsageCallback
+from cogents.core.base.typing_compat import override
 
 from .conversation import ConversationManager
 from .extractor import InformationExtractor

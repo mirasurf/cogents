@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "cogents"
-version = "0.0.19"
+version = "0.0.20"
 description = "Towards a cognitive agentic framework"
 readme = "README.md"
 license = "MIT"
@@ -24,44 +24,18 @@ classifiers = [
 packages = [{include = "cogents"}]
 
 [tool.poetry.dependencies]
-# Basic dependencies
 python = "^3.11"
 pydantic = "^2.0.0"
-requests = "^2.31.0"
 python-dotenv = "^1.1.1"
-colorlog = "^6.8.0"
-typing-extensions = "^4.8.0"
-deprecated = "^1.2.18"
+cogents-core = "^0.1.1,<0.2.0"
 httpx = "^0.28.1"
 aiohttp = "^3.9.0"
 anyio = "^4.10.0"
-bubus = "^1.5.6"
-psutil = "^7.0.0"
-# LLM and AI dependencies
-openai = "^1.0.0"
-instructor = "^1.10.0"
-google-genai = "^1.5.0"
-# LangChain ecosystem
-langchain-core = "^0.3.72"
-langchain-text-splitters = "^0.3.0"
-langchain-tavily = "^0.2.11"
-langchain-ollama = "^0.2.0"
-langgraph = "^0.5.4"
-# LLM providers
-litellm = "^1.0.0"
-ollama = "^0.5.3"
-huggingface-hub = "^0.34.4"
-llama-cpp-python = "^0.3.16"
-# Orchestration
-networkx = "^3.5"
-# MCP support
-mcp = "^1.0.0"
-
-[tool.poetry.group.tools.dependencies]
 # Vector database
 weaviate-client = "^4.9.0"
 # Web search
 tavily-python = "^0.3.0"
+langchain-tavily = "^0.2.11"
 # Voice processing
 aliyun-python-sdk-core = "^2.13.1,<3.0.0"
 # Web surfer

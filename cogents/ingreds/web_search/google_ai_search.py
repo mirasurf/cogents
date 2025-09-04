@@ -11,7 +11,7 @@ from typing import Any, Dict, List, Optional
 from google.genai import Client as GenAIClient
 from google.genai import types
 
-from cogents.base.base_search import BaseSearch, SearchResult, SourceItem
+from cogents.core.base.base_search import BaseSearch, SearchResult, SourceItem
 
 logger = logging.getLogger(__name__)
 

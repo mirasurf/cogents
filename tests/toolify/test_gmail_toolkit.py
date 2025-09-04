@@ -8,7 +8,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from cogents.toolify import ToolkitConfig, get_toolkit
+from cogents.core.toolify import ToolkitConfig, get_toolkit
 
 
 @pytest.fixture
@@ -88,7 +88,7 @@ class TestGmailService:
 
     def test_gmail_service_initialization_with_access_token(self):
         """Test GmailService initialization with access token."""
-        from cogents.toolify.toolkits.gmail_toolkit import GmailService
+        from cogents.core.toolify.toolkits.gmail_toolkit import GmailService
 
         service = GmailService(access_token="test_token")
 
@@ -99,7 +99,7 @@ class TestGmailService:
     @patch("cogents.toolify.toolkits.gmail_toolkit.Path.mkdir")
     def test_gmail_service_initialization_with_custom_paths(self, mock_mkdir):
         """Test GmailService initialization with custom paths."""
-        from cogents.toolify.toolkits.gmail_toolkit import GmailService
+        from cogents.core.toolify.toolkits.gmail_toolkit import GmailService
 
         service = GmailService(
             credentials_file="/custom/creds.json", token_file="/custom/token.json", config_dir="/custom/config"
@@ -114,7 +114,7 @@ class TestGmailService:
     @patch("cogents.toolify.toolkits.gmail_toolkit.Credentials")
     async def test_authenticate_with_access_token_success(self, mock_credentials, mock_build):
         """Test successful authentication with access token."""
-        from cogents.toolify.toolkits.gmail_toolkit import GmailService
+        from cogents.core.toolify.toolkits.gmail_toolkit import GmailService
 
         # Mock credentials and Gmail service
         mock_creds = Mock()
@@ -134,7 +134,7 @@ class TestGmailService:
     @patch("cogents.toolify.toolkits.gmail_toolkit.Credentials")
     async def test_authenticate_with_access_token_failure(self, mock_credentials, mock_build):
         """Test authentication failure with access token."""
-        from cogents.toolify.toolkits.gmail_toolkit import GmailService
+        from cogents.core.toolify.toolkits.gmail_toolkit import GmailService
 
         # Mock credentials to raise exception
         mock_build.side_effect = Exception("Authentication failed")
@@ -150,7 +150,7 @@ class TestGmailService:
     @patch("cogents.toolify.toolkits.gmail_toolkit.build")
     async def test_authenticate_with_existing_tokens(self, mock_build, mock_from_file, mock_exists):
         """Test authentication with existing valid tokens."""
-        from cogents.toolify.toolkits.gmail_toolkit import GmailService
+        from cogents.core.toolify.toolkits.gmail_toolkit import GmailService
 
         # Mock existing token file and valid credentials
         mock_exists.return_value = True
@@ -168,7 +168,7 @@ class TestGmailService:
 
     async def test_get_recent_emails_not_authenticated(self):
         """Test getting emails when not authenticated."""
-        from cogents.toolify.toolkits.gmail_toolkit import GmailService
+        from cogents.core.toolify.toolkits.gmail_toolkit import GmailService
 
         service = GmailService()
         emails = await service.get_recent_emails()
@@ -178,7 +178,7 @@ class TestGmailService:
     @patch("cogents.toolify.toolkits.gmail_toolkit.GmailService.is_authenticated")
     async def test_get_recent_emails_success(self, mock_is_auth, mock_gmail_service):
         """Test successful email retrieval."""
-        from cogents.toolify.toolkits.gmail_toolkit import GmailService
+        from cogents.core.toolify.toolkits.gmail_toolkit import GmailService
 
         mock_is_auth.return_value = True
 
@@ -195,7 +195,7 @@ class TestGmailService:
 
     def test_parse_email(self):
         """Test email parsing functionality."""
-        from cogents.toolify.toolkits.gmail_toolkit import GmailService
+        from cogents.core.toolify.toolkits.gmail_toolkit import GmailService
 
         service = GmailService()
 
@@ -222,7 +222,7 @@ class TestGmailService:
 
     def test_extract_body_simple(self):
         """Test extracting body from simple email."""
-        from cogents.toolify.toolkits.gmail_toolkit import GmailService
+        from cogents.core.toolify.toolkits.gmail_toolkit import GmailService
 
         service = GmailService()
 
@@ -233,7 +233,7 @@ class TestGmailService:
 
     def test_extract_body_multipart(self):
         """Test extracting body from multipart email."""
-        from cogents.toolify.toolkits.gmail_toolkit import GmailService
+        from cogents.core.toolify.toolkits.gmail_toolkit import GmailService
 
         service = GmailService()
 

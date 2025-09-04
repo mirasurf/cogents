@@ -9,8 +9,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from cogents.toolify import ToolkitConfig, get_toolkit
-from cogents.toolify.toolkits.audio_aliyun_toolkit import AudioAliyunToolkit
+from cogents.core.toolify import ToolkitConfig, get_toolkit
+from cogents.core.toolify.toolkits.audio_aliyun_toolkit import AudioAliyunToolkit
 
 
 @pytest.fixture

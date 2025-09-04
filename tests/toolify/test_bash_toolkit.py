@@ -10,8 +10,8 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from cogents.toolify.config import ToolkitConfig
-from cogents.toolify.toolkits.bash_toolkit import BashToolkit
+from cogents.core.toolify.config import ToolkitConfig
+from cogents.core.toolify.toolkits.bash_toolkit import BashToolkit
 
 
 class TestBashToolkitInitialization:

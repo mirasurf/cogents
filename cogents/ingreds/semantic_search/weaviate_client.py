@@ -15,7 +15,7 @@ from pydantic import BaseModel, Field
 from weaviate.classes.config import Configure, DataType, Property
 from weaviate.classes.query import Filter
 
-from cogents.base.consts import OLLAMA_EMBEDDING_MODEL, OLLAMA_GENERATIVE_MODEL
+from cogents.core.base.consts import OLLAMA_EMBEDDING_MODEL, OLLAMA_GENERATIVE_MODEL
 
 from .types import DocumentChunk
 

@@ -5,14 +5,14 @@
 Cogents is a collection of essential building blocks for constructing sophisticated multi-agent systems.
 
 ### Key Modules
-- `cogents.base.llm` - LLM provider abstractions with support for OpenAI, OpenRouter, Ollama, and LlamaCpp
+- `cogents.core.base.llm` - LLM provider abstractions with support for OpenAI, OpenRouter, Ollama, and LlamaCpp
 - `cogents.agents` - Various agent implementations
 - `cogents.memory` - Memory management for agents
 - `cogents.sensory` - Sensory processing capabilities
 - `cogents.toolify` - Tool integration framework
 
 ### LLM Providers
-Supported providers in `cogents.base.llm`:
+Supported providers in `cogents.core.base.llm`:
 - `openai` - OpenAI API compatible services
 - `openrouter` - OpenRouter API
 - `ollama` - Local Ollama instances  
@@ -56,7 +56,7 @@ python -m cogents.example
 ## LLM Usage Examples
 
 ```python
-from cogents.base.llm import get_llm_client
+from cogents.core.base.llm import get_llm_client
 
 # OpenAI/OpenRouter providers
 client = get_llm_client(provider="openai", api_key="sk-...")

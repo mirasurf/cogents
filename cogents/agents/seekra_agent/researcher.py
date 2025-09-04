@@ -11,9 +11,9 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import Send
 
-from cogents.base.base_agent import BaseResearcher, ResearchOutput
-from cogents.base.logging import get_logger
-from cogents.base.typing_compat import override
+from cogents.core.base.base_agent import BaseResearcher, ResearchOutput
+from cogents.core.base.logging import get_logger
+from cogents.core.base.typing_compat import override
 
 from .configuration import Configuration
 from .prompts import answer_instructions, query_writer_instructions, reflection_instructions

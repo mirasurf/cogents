@@ -11,8 +11,8 @@ from unittest.mock import patch
 
 import pytest
 
-from cogents.toolify.config import ToolkitConfig
-from cogents.toolify.toolkits.file_edit_toolkit import FileEditToolkit
+from cogents.core.toolify.config import ToolkitConfig
+from cogents.core.toolify.toolkits.file_edit_toolkit import FileEditToolkit
 
 
 class TestFileEditToolkitInitialization:

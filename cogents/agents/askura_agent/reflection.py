@@ -1,9 +1,9 @@
 import random
 from typing import Any, List, Optional
 
-from cogents.base.llm import BaseLLMClient
-from cogents.base.logging import get_logger
-from cogents.base.utils import get_enum_value
+from cogents.core.base.llm import BaseLLMClient
+from cogents.core.base.logging import get_logger
+from cogents.core.base.utils import get_enum_value
 
 from .models import (
     AskuraConfig,
