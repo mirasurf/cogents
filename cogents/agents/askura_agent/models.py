@@ -9,7 +9,7 @@ from cogents_core.consts import GEMINI_FLASH
 from langchain_core.messages import BaseMessage
 from pydantic import BaseModel, Field
 
-from cogents.utils import get_enum_value
+from .utils import get_enum_value
 
 
 class ConversationStyle(str, Enum):

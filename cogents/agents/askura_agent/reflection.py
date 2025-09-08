@@ -4,8 +4,6 @@ from typing import Any, List, Optional
 from cogents_core.llm import BaseLLMClient
 from cogents_core.logging_config import get_logger
 
-from cogents.utils import get_enum_value
-
 from .models import (
     AskuraConfig,
     AskuraState,
@@ -16,6 +14,7 @@ from .models import (
     NextActionPlan,
 )
 from .prompts import get_conversation_analysis_prompts
+from .utils import get_enum_value
 
 logger = get_logger(__name__)
 
