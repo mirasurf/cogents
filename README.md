@@ -1,8 +1,8 @@
 # Cogents
 
-[![CI](https://github.com/caesar0301/cogents/actions/workflows/ci.yml/badge.svg)](https://github.com/caesar0301/cogents/actions/workflows/ci.yml)
-<!-- [![PyPI version](https://img.shields.io/pypi/v/cogents.svg)](https://pypi.org/project/cogents/) -->
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/caesar0301/cogents)
+<!-- [![CI](https://github.com/caesar0301/cogents/actions/workflows/ci.yml/badge.svg)](https://github.com/caesar0301/cogents/actions/workflows/ci.yml)
+[![PyPI version](https://img.shields.io/pypi/v/cogents.svg)](https://pypi.org/project/cogents/)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/caesar0301/cogents) -->
 
 [Project Cogents](https://github.com/caesar0301/cogents) is an initiative to develop a **cognitive, computation-driven agentic system**. To achieve this, we are assembling a set of robust, reusable building blocks for constructing **multi-agent systems (MAS)**. For the guiding philosophy behind this work, see my talk on MAS ([slides](https://github.com/caesar0301/mas-talk-2508/blob/master/mas-talk-xmingc.pdf)).
 
