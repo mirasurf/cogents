@@ -4,130 +4,18 @@
 [![PyPI version](https://img.shields.io/pypi/v/cogents.svg)](https://pypi.org/project/cogents/)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/caesar0301/cogents)
 
-A comprehensive collection of essential building blocks for constructing cognitive multi-agent systems (MAS). Rather than building a full agent framework, Cogents provides a lightweight repository of key components designed to bridge the final mile in MAS development. Our philosophy focuses on modular, composable components that can be easily integrated into existing systems or used to build new ones from the ground up. For the underlying philosophy, refer to my talk on MAS ([link](https://github.com/caesar0301/mas-talk-2508/blob/master/mas-talk-xmingc.pdf)).
+[Project Cogents](https://github.com/caesar0301/cogents) is an initiative to develop a **cognitive, computation-driven agentic system**. To achieve this, we are assembling a set of robust, reusable building blocks for constructing **multi-agent systems (MAS)**. For the guiding philosophy behind this work, see my talk on MAS ([slides](https://github.com/caesar0301/mas-talk-2508/blob/master/mas-talk-xmingc.pdf)).
 
-## Core Modules
+Cogents builds on several subprojects and a broad ecosystem of community libraries. Each subproject offers lightweight, modular components that bridge the *last mile* of MAS development. The design philosophy emphasizes **modularity, composability, and integration**—components can be plugged into existing infrastructures or serve as the foundation for entirely new systems.
 
-Cogents offers a comprehensive set of modules for creating intelligent agent-based applications:
+## Subprojects
 
-### LLM Integration & Management
-- **Multi-model support**: OpenAI, Google GenAI (via OpenRouter), Ollama, and LlamaCPP
-- **Advanced routing**: Dynamic complexity-based and self-assessment routing strategies
-- **Tracing & monitoring**: Built-in token tracking and Opik tracing integration
-- **Extensible architecture**: Easy to add new LLM providers
+- **[cogents-core](https://github.com/mirasurf/cogents-core)**  
+  Provides the foundational abstractions—**Agent, Memory, Tool, Goal, Orchestration**, and more—along with essential modules such as LLM clients, logging, message buses, model routing, and observability. For more [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/mirasurf/cogents-core)
 
-### Extensible Resources & Capabilities
-- **Web search**: Tavily and Google AI Search integration
-- **Vector stores**: Weaviate and PostgreSQL with pgvector support
-- **Semantic search**: Integrated semantic web search with document processing
-- **Voice processing**: Smart voice transcription and processing features
-
-### Goal Management & Planning
-- **Goal decomposition**: LLM-based and callable goal decomposition strategies
-- **Conflict detection**: Automated goal conflict identification and resolution
-- **Replanning**: Dynamic goal replanning capabilities
-
-### Tool Management
-- **Tool registry**: Centralized tool registration and management
-- **Execution engine**: Robust tool execution with error handling
-- **Repository system**: Organized tool storage and retrieval
-
-### Agent Gallery
-- **Askura Agent**: Advanced conversation and memory management agent
-- **Seekra Agent**: Research-focused agent with web search capabilities
-- **Mem Agent**: Memory-focused agent (coming soon)
-- **Cogito Agent**: Cognitive reasoning agent (coming soon)
-
-## Project Structure
-
-```
-cogents/
-├── agents/           # Agent implementations
-├── base/            # Base classes and models
-├── common/          # Shared utilities and LLM integrations
-├── goalith/         # Goal management and planning
-├── memory/          # Memory management (on plan)
-├── orchestrix/      # Global orchestration (on plan)
-├── resources/       # External service integrations
-└── toolify/         # Tool management and execution
-```
-
-## Creating a New Agent
-
-### From Base Classes
-Start with the base agent classes in `cogents_core.base` to create custom agents with full control over behavior and capabilities.
-
-#### Base Agent Class Hierarchy
-
-```
-BaseAgent (abstract)
-├── Core functionality
-│   ├── LLM client management
-│   ├── Token usage tracking
-│   ├── Logging capabilities
-│   └── Configuration management
-│
-├── BaseGraphicAgent (abstract)
-│   ├── LangGraph integration
-│   ├── State management
-│   ├── Graph visualization
-│   └── Error handling patterns
-│   │
-│   ├── BaseConversationAgent (abstract)
-│   │   ├── Session management
-│   │   ├── Message handling
-│   │   ├── Conversation state
-│   │   └── Response generation
-│   │
-│   └── BaseResearcher (abstract)
-│       ├── Research workflow
-│       ├── Source management
-│       ├── Query generation
-│       └── Result compilation
-│           └── Uses ResearchOutput model
-│               ├── content: str
-│               ├── sources: List[Dict]
-│               ├── summary: str
-│               └── timestamp: datetime
-```
-
-**Key Inheritance Paths:**
-- **BaseAgent**: Core functionality (LLM client, token tracking, logging)
-- **BaseGraphicAgent**: LangGraph integration and visualization
-- **BaseConversationAgent**: Session management and conversation patterns
-- **BaseResearcher**: Research workflow and structured output patterns
-
-### From Existing Agents
-Use well-constructed agents like Seekra Agent as templates:
-
-```python
-from cogents.agents.seekra_agent import SeekraAgent
-
-# Extend Seekra Agent for custom research tasks
-class CustomResearchAgent(SeekraAgent):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Add custom functionality
-        
-    def custom_research_method(self):
-        # Implement custom research logic
-        pass
-```
-
-## Install
-
-```
-pip install -U cogents
-```
-
-## Documentation
-
-For detailed documentation, visit: https://cogents.readthedocs.io/ (under construction)
+- **[cogents-tools](https://github.com/mirasurf/cogents-tools)**  
+  A collection of well-tested services and toolkits for building advanced, high-level agentic applications and systems. For more [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/mirasurf/cogents-tools)
 
 ## License
 
 MIT License - see [LICENSE](LICENSE) file for details.
-
-## Acknowledgment
-
-- Tencent [Youtu-agent](https://github.com/Tencent/Youtu-agent) toolkits integration.
