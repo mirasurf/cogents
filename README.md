@@ -10,11 +10,9 @@ Cogents builds on several subprojects and a broad ecosystem of community librari
 
 ## Subprojects
 
-- **[cogents-core](https://github.com/mirasurf/cogents-core)**  
-  Provides the foundational abstractions—**Agent, Memory, Tool, Goal, Orchestration**, and more—along with essential modules such as LLM clients, logging, message buses, model routing, and observability. For more [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/mirasurf/cogents-core)
+- **[cogents-core](https://github.com/mirasurf/cogents-core)**: Provides the foundational abstractions—**Agent, Memory, Tool, Goal, Orchestration**, and more—along with essential modules such as LLM clients, logging, message buses, model routing, and observability. For more [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/mirasurf/cogents-core)
 
-- **[cogents-tools](https://github.com/mirasurf/cogents-tools)**  
-  A collection of well-tested services and toolkits for building advanced, high-level agentic applications and systems. For more [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/mirasurf/cogents-tools)
+- **[cogents-tools](https://github.com/mirasurf/cogents-tools)**: A collection of well-tested services and toolkits for building advanced, high-level agentic applications and systems. For more [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/mirasurf/cogents-tools)
 
 ## License
 
