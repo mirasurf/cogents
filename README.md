@@ -1,5 +1,3 @@
-# Cogents
-
 <!-- [![CI](https://github.com/caesar0301/cogents/actions/workflows/ci.yml/badge.svg)](https://github.com/caesar0301/cogents/actions/workflows/ci.yml)
 [![PyPI version](https://img.shields.io/pypi/v/cogents.svg)](https://pypi.org/project/cogents/)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/caesar0301/cogents) -->
